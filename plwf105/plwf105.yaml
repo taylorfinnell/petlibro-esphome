@@ -1,0 +1,142 @@
+esphome:
+  name: plwf105
+  friendly_name: plwf105
+  platformio_options:
+    board_build.flash_mode: dio
+    board_build.flash_size: 4MB
+    board_build.f_flash: 40000000L
+esp32:
+  board: esp32-c3-devkitm-1
+  variant: ESP32C3
+  framework:
+    type: esp-idf
+
+logger:
+
+api:
+  encryption:
+    key: "<some-key>"
+
+ota:
+  password: "<some-password>"
+
+# I obtained these by watching the serial console on the stock firmware.
+#
+#␛[0;32mI (460) gpio: GPIO[3]| InputEn: 0| OutputEn: 1| OpenDrain: 0| Pullup: 0| Pulldown: 0| Intr:0 ␛[0m
+#␛[0;32mI (460) BSP_init: GPIO_PUMP_EN: GPIO_OUTPUT_HIGH_LEVEL!␛[0m
+
+#␛[0;32mI (470) gpio: GPIO[10]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 0| Pulldown: 0| Intr:0 ␛[0m
+#␛[0;32mI (480) BSP_init: water_signal: ok!␛[0m
+
+#␛[0;32mI (480) gpio: GPIO[1]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 0| Pulldown: 0| Intr:4 ␛[0m
+#␛[0;32mI (490) BSP_init: Key_init: ok!␛[0m
+
+#␛[0;32mI (490) gpio: GPIO[7]| InputEn: 0| OutputEn: 1| OpenDrain: 0| Pullup: 0| Pulldown: 0| Intr:0 ␛[0m
+#␛[0;32mI (500) BSP_init: AlarmLed_init: ok!␛[0m
+
+#␛[0;32mI (510) gpio: GPIO[6]| InputEn: 0| OutputEn: 1| OpenDrain: 0| Pullup: 0| Pulldown: 0| Intr:0 ␛[0m
+#␛[0;32mI (520) BSP_init: WifiLed_init: ok!␛[0m
+
+#␛[0;32mI (530) gpio: GPIO[18]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:1 ␛[0m
+#␛[0;32mI (520) gpio: GPIO[19]| InputEn: 0| OutputEn: 1| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:0 ␛[0m
+
+debug:
+
+sensor:
+  - platform: hx711
+    name: "Scale"
+    dout_pin:
+      number: GPIO18
+      mode: INPUT_PULLUP
+    clk_pin:
+      number: GPIO19
+      mode:
+        pullup: true
+        output: true
+    gain: 128
+    update_interval: 3s
+    filters:
+      - quantile:
+          window_size: 10
+          send_every: 1
+          send_first_at: 1
+          quantile: .9
+      - lambda: |-
+          if (x <= 0.1) {
+            return 0.0;
+          } else {
+            return x;
+          }
+
+  - platform: uptime
+    name: Bowl Uptime
+  - platform: wifi_signal
+    name: Bowl WiFi Signal
+    update_interval: 60s
+
+  - platform: debug
+    free:
+      name: "Heap Free"
+    loop_time:
+      name: "Loop Time"
+
+switch:
+
+  - platform: gpio
+    name: 'Pump'
+    pin: 
+      number: GPIO3
+      mode: OUTPUT
+
+  - platform: gpio
+    name: 'Yellow LED'
+    pin:
+      number: GPIO6
+      mode: OUTPUT
+
+  - platform: gpio
+    name: 'Red LED'
+    pin: 
+      number: GPIO7
+      mode: OUTPUT
+
+
+text_sensor:
+  - platform: version
+    name: Bowl ESPHome Version
+  - platform: wifi_info
+    ip_address:
+      name: Bowl IP
+    ssid:
+      name: Bowl SSID
+    bssid:
+      name: Bowl BSSID
+ 
+binary_sensor:
+  - platform: gpio
+    name: "WiFi Button"
+    pin: 
+      number: GPIO1
+      mode: INPUT
+
+  - platform: gpio
+    name: 'Pump Error'
+    pin: 
+      number: GPIO10
+      #inverted: true
+      mode: INPUT
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+  manual_ip:
+    static_ip: 192.168.30.222
+    gateway: 192.168.30.1
+    subnet: 255.255.255.0
+
+  ap:
+    ssid: "PLWF105 Fallback Hotspot"
+    password: "<some-password>"
+
+captive_portal:
