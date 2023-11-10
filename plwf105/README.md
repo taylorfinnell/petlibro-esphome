@@ -39,3 +39,10 @@ You don't even need to solder anything most likely. I was able to hold the pins 
 3) While still holding the wire in place, plug in the board.
 4) At this point the board should be in programming mode.
 5) Flash the firmware in this repo.
+
+## Result
+
+Here is how it looks in HomeAssistant:
+
+![result](https://snaps.screensnapr.io/87e1c594199be79458be93003644f0)
+
