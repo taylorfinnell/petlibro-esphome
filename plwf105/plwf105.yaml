@@ -130,11 +130,6 @@ wifi:
   ssid: !secret wifi_ssid
   password: !secret wifi_password
 
-  manual_ip:
-    static_ip: 192.168.30.222
-    gateway: 192.168.30.1
-    subnet: 255.255.255.0
-
   ap:
     ssid: "PLWF105 Fallback Hotspot"
     password: "<some-password>"
