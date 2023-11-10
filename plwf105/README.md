@@ -8,6 +8,14 @@ The default firmware, which is included in this respository requires use of the 
 
 The esphome firmware included in this repository implements (almost) feature parity as the stock firmware without the need for the third party cloud, or any WAN connection for that matter.
 
+### Supported Features
+
+- Turn pump on or off
+- Red LED
+- Yellow LED
+- Scale (used to determine water level)
+- Pump error indicator
+
 ## Flashing prereqs
 
 If you carefully open the water bowl "base" you will see a PCB holding a `ESP32-C3-WROOM-03`, a `HX7111` and a voltage regulator. There is also one more chip on the board but I am unable to identify it.
