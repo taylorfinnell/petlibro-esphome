@@ -1,0 +1,151 @@
+esphome:
+  name: PLAF108
+  friendly_name: PLAF108
+
+esp32:
+  board: esp32-c3-devkitm-1
+  framework:
+    type: arduino
+
+logger:
+  baud_rate: 0
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+  manual_ip:
+    static_ip: 192.168.30.68
+    gateway: 192.168.30.1
+    subnet: 255.255.255.0
+
+captive_portal:
+
+web_server:
+
+binary_sensor:
+  #I (468) gpio: GPIO[1]| InputEn: 0| OutputEn: 1| OpenDrain: 0| Pullup: 0| Pulldown: 1| Intr:0                                                                                                                                                                                                                                               
+  #I (599) gpio: GPIO[2]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:0   
+
+  - platform: gpio
+    pin: 
+      number: GPIO1
+      mode:
+        output: true
+        pulldown: true
+    name: "GPIO1"
+
+  - platform: gpio
+    pin:
+      number: GPIO1
+      mode: INPUT_PULLUP
+    name: "GPIO2"
+
+
+
+  #I (571) gpio: GPIO[0]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:4   
+  - platform: gpio
+    name: Battery
+    pin: 
+      number: GPIO0
+      mode: 
+        pullup: true
+        input:  true  
+
+  #I (590) gpio: GPIO[4]| InputEn: 0| OutputEn: 0| OpenDrain: 0| Pullup: 0| Pulldown: 0| Intr:0
+  - platform: gpio
+    name: 'Battery Plugged In'
+    pin: GPIO4
+
+  #I (562) gpio: GPIO[5]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:4   
+  - platform: gpio
+    pin: 
+      number: GPIO5
+      inverted: true
+      mode: 
+        pullup: true
+        input:  true
+    name: Mains Connected
+  
+  #I (543) gpio: GPIO[8]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:4         # SENSOR                                                                   
+  - platform: gpio
+    name: Motor Sensor
+    pin: 
+      inverted: true
+      number: GPIO8
+      mode: 
+        pullup: true
+        input:  true
+
+  #I (553) gpio: GPIO[18]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:0                                                                   
+  - platform: gpio
+    pin: 
+      number: GPIO18
+      mode: 
+        pullup: true
+        input:  true
+    name: Food Sensor
+
+  #I (503) gpio: GPIO[19]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:4        
+  - platform: gpio
+    pin: 
+      number: GPIO19
+      mode: 
+        pullup: true
+    name: Reset Button
+
+#I (530) gpio: GPIO[3]| InputEn: 0| OutputEn: 1| OpenDrain: 0| Pullup: 0| Pulldown: 0| Intr:0  
+status_led:
+  pin: 
+    number: GPIO3
+    mode:
+      output: true
+
+switch:
+  - platform: restart
+    name: "Restart"
+
+  #I (481) gpio: GPIO[6]| InputEn: 0| OutputEn: 1| OpenDrain: 0| Pullup: 0| Pulldown: 0| Intr:0    
+  - platform: gpio
+    name: 'Motor Right'
+    pin: 
+      number: GPIO6
+      mode: 
+        output: true
+    restore_mode: ALWAYS_OFF
+
+  #I (490) gpio: GPIO[7]| InputEn: 0| OutputEn: 1| OpenDrain: 0| Pullup: 0| Pulldown: 0| Intr:0 
+  - platform: gpio
+    name: 'Motor Left'
+    pin: 
+      number: GPIO7
+      mode: 
+        output: true
+    restore_mode: ALWAYS_OFF
+  
+  #I (516) gpio: GPIO[10]| InputEn: 0| OutputEn: 1| OpenDrain: 0| Pullup: 0| Pulldown: 1| Intr:0             
+  - platform: gpio
+    name: 'Alarm LED'
+    pin: 
+      number: GPIO10
+      mode: 
+        output: true
+        pulldown: true
+
+  #I (580) gpio: GPIO[9]| InputEn: 0| OutputEn: 1| OpenDrain: 0| Pullup: 0| Pulldown: 0| Intr:0     
+  - platform: gpio
+    name: 'Enable Food Sensor'
+    pin: 
+      number: GPIO9
+      mode: 
+        output: true
+    restore_mode: ALWAYS_ON
+
+uart:
+  tx_pin: GPIO21
+  rx_pin: GPIO20
+  baud_rate: 115200
+
+sensor:
+  - platform: uptime
+    name: Uptime
