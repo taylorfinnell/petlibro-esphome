@@ -18,8 +18,6 @@ substitutions:
   name: mia-water-bowl
   friendly_name: Mia Water Bowl
 
-logger:
-
 api:
   encryption:
     key: "CHANGEME"
@@ -30,7 +28,7 @@ wifi:
   ssid: !secret wifi_ssid
   password: !secret wifi_password
   ap:
-    password: "VdkpvVWmbuu0"
+    password: "CHANGEME"
 
 dashboard_import:
   package_import_url: github://taylorfinnell/petlibro-esphome/plwf105/plwf105.yaml@master
