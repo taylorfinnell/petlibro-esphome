@@ -22,22 +22,15 @@ logger:
 
 api:
   encryption:
-    key: rgRQfQg/fzDuQnihMjGIABBk+JV1ARRi2d1E55UvNd0=
+    key: "CHANGEME"
 ota:
-  password: "956eb0b4d05f51380a1829eae220cdc0"
+  password: "CHANGEME"
 
 wifi:
   ssid: !secret wifi_ssid
   password: !secret wifi_password
-  manual_ip:
-    static_ip: 192.168.30.222
-    gateway: 192.168.30.1
-    subnet: 255.255.255.0
   ap:
-    ssid: "Mia-Water-Bowl Fallback Hotspot"
     password: "VdkpvVWmbuu0"
-
-captive_portal:
 
 dashboard_import:
   package_import_url: github://taylorfinnell/petlibro-esphome/plwf105/plwf105.yaml@master
