@@ -45,7 +45,7 @@ api:
 ota:
 
 dashboard_import:
-  package_import_url: github://taylorfinnell/petlibro-esphome/blob/master/plwf105/plwf105.yaml@v1.0.0
+  package_import_url: github://taylorfinnell/petlibro-esphome/plwf105/plwf105.yaml@v1.0.0
   import_full_config: false # or true
 
 wifi:
