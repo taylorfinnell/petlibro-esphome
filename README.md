@@ -9,7 +9,11 @@ A collection of esphome  firmwares for Petlibro devices.
 
 ```
 packages:
-  plwf105: github://taylorfinnell/petlibro-esphome/plwf105/plwf105.yaml@master
+  remote_package:
+    url: https://github.com/taylorfinnell/petlibro-esphome
+    ref: master
+    files: ['plwf105/plwf105.yaml']
+    refresh: 1s
 
 substitutions:
   name: mia-water-bowl
