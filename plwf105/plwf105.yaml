@@ -1,27 +1,3 @@
-esphome:
-  name: plwf105
-  friendly_name: plwf105
-  platformio_options:
-    board_build.flash_mode: dio
-    board_build.flash_size: 4MB
-    board_build.f_flash: 40000000L
-esp32:
-  board: esp32-c3-devkitm-1
-  variant: ESP32C3
-  framework:
-    type: esp-idf
-
-logger:
-
-api:
-  encryption:
-    key: "<some-key>"
-
-ota:
-  password: "<some-password>"
-
-# I obtained these by watching the serial console on the stock firmware.
-#
 #␛[0;32mI (460) gpio: GPIO[3]| InputEn: 0| OutputEn: 1| OpenDrain: 0| Pullup: 0| Pulldown: 0| Intr:0 ␛[0m
 #␛[0;32mI (460) BSP_init: GPIO_PUMP_EN: GPIO_OUTPUT_HIGH_LEVEL!␛[0m
 
@@ -40,11 +16,94 @@ ota:
 #␛[0;32mI (530) gpio: GPIO[18]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:1 ␛[0m
 #␛[0;32mI (520) gpio: GPIO[19]| InputEn: 0| OutputEn: 1| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:0 ␛[0m
 
-debug:
+
+substitutions:
+  name: "petlibro-plwf105"
+  friendly_name: "PetLibro PLWF105"
+
+esphome:
+  name: "${name}"
+  friendly_name: "${friendly_name}"
+  platformio_options:
+    board_build.flash_mode: dio 
+    board_build.flash_size: 4MB
+    board_build.f_flash: 40000000L
+  project:
+    name: petlibro.plwf105
+    version: "1.0.0"
+
+esp32:
+  board: esp32-c3-devkitm-1
+  variant: ESP32C3
+  framework:
+    type: esp-idf
+
+logger:
+
+api:
+
+ota:
+
+dashboard_import:
+  package_import_url: github://taylorfinnell/petlibro-esphome/plwf105/plwf105.yaml@master
+  import_full_config: false # or true
+
+wifi:
+
+captive_portal:
+
+esp32_improv:
+  authorizer: none
+
+globals:
+  - id: max_water_level
+    type: int
+    initial_value: '10000'
+    restore_value: yes
+  - id: min_water_level
+    type: int
+    initial_value: '0'
+    restore_value: yes
+
+number:
+  - platform: template
+    name: "Min Water level"
+    optimistic: true
+    min_value: -1_000_000_000
+    max_value: 1_000_000_000
+    step: 1
+    restore_value: yes
+    on_value:
+      then:
+        - globals.set:
+            id: min_water_level
+            value: !lambda 'return int(x);'
+
+
+  - platform: template
+    name: "Max Water level"
+    optimistic: true
+    min_value: -1_000_000_000
+    max_value: 1_000_000_000
+    step: 1
+    restore_value: yes
+    on_value:
+      then:
+        - globals.set:
+            id: max_water_level
+            value: !lambda 'return int(x);'
 
 sensor:
+  - platform: pulse_counter
+    pin: 
+      number: GPIO10
+      mode: INPUT
+    name: "Pump Error Counter"
+    internal: true
+    id: errors
+
   - platform: hx711
-    name: "Scale"
+    name: "Internal Water Level"
     dout_pin:
       number: GPIO18
       mode: INPUT_PULLUP
@@ -55,6 +114,7 @@ sensor:
         output: true
     gain: 128
     update_interval: 3s
+    id: water_level
     filters:
       - quantile:
           window_size: 10
@@ -69,41 +129,68 @@ sensor:
           }
 
   - platform: uptime
-    name: Bowl Uptime
+    name: Uptime
+
   - platform: wifi_signal
-    name: Bowl WiFi Signal
+    name: WiFi Signal
     update_interval: 60s
 
-  - platform: debug
-    free:
-      name: "Heap Free"
-    loop_time:
-      name: "Loop Time"
+  - platform: template
+    name: Water Level
+    id: water_level_percentage
+    update_interval: 1s
+    lambda: |-
+        if(id(water_level).state >= id(max_water_level)) {
+          return 0;
+        }
 
+        if(id(water_level).state <= id(min_water_level)) {
+          return 0;
+        }
+        
+        return ((id(water_level).state - id(min_water_level)) * 100) / (id(max_water_level) - id(min_water_level));
+
+status_led:
+  pin: GPIO6
+
+web_server:
+  
 switch:
-
   - platform: gpio
     name: 'Pump'
     pin: 
       number: GPIO3
       mode: OUTPUT
+    restore_mode: ALWAYS_ON
 
+output:
   - platform: gpio
-    name: 'Yellow LED'
+    id: yellow_led_output
     pin:
       number: GPIO6
       mode: OUTPUT
 
   - platform: gpio
-    name: 'Red LED'
+    id: red_led_output
     pin: 
       number: GPIO7
       mode: OUTPUT
 
+light:
+  - platform: binary
+    name: "Red LED"
+    output: red_led_output
+    id: red_led
+
+  - platform: binary
+    name: "Yellow LED"
+    output: yellow_led_output
+    id: yellow_led
 
 text_sensor:
   - platform: version
-    name: Bowl ESPHome Version
+    name: ESPHome Version
+
   - platform: wifi_info
     ip_address:
       name: Bowl IP
@@ -111,27 +198,30 @@ text_sensor:
       name: Bowl SSID
     bssid:
       name: Bowl BSSID
- 
+
 binary_sensor:
   - platform: gpio
-    name: "WiFi Button"
+    name: "WiFi button"
     pin: 
       number: GPIO1
       mode: INPUT
 
   - platform: gpio
     name: 'Pump Error'
+    internal: true
     pin: 
       number: GPIO10
-      #inverted: true
       mode: INPUT
 
-wifi:
-  ssid: !secret wifi_ssid
-  password: !secret wifi_password
-
-  ap:
-    ssid: "PLWF105 Fallback Hotspot"
-    password: "<some-password>"
-
-captive_portal:
+  - platform: template
+    name: "Empty"
+    lambda: |-
+      return id(errors).state >= 10;
+    on_state:
+      then:
+        - lambda: |-
+            if(x) { 
+              id(red_led_output).turn_on();
+            } else {
+               id(red_led_output).turn_off();
+            }
