@@ -30,7 +30,7 @@ esphome:
     board_build.f_flash: 40000000L
   project:
     name: petlibro.plwf105
-    version: "1.0.1"
+    version: "1.0.2"
 
 esp32:
   board: esp32-c3-devkitm-1
@@ -193,11 +193,11 @@ text_sensor:
 
   - platform: wifi_info
     ip_address:
-      name: Bowl IP
+      name: IP
     ssid:
-      name: Bowl SSID
+      name: SSID
     bssid:
-      name: Bowl BSSID
+      name: BSSID
 
 binary_sensor:
   - platform: gpio
