@@ -150,9 +150,6 @@ sensor:
         
         return ((id(water_level).state - id(min_water_level)) * 100) / (id(max_water_level) - id(min_water_level));
 
-status_led:
-  pin: GPIO6
-
 web_server:
   
 switch:
@@ -204,13 +201,6 @@ binary_sensor:
     name: "WiFi Button"
     pin: 
       number: GPIO1
-      mode: INPUT
-
-  - platform: gpio
-    name: 'Pump Error'
-    internal: true
-    pin: 
-      number: GPIO10
       mode: INPUT
 
   - platform: template
