@@ -139,6 +139,9 @@ sensor:
     name: Water Level
     id: water_level_percentage
     update_interval: 1s
+    state_class: measurement
+    unit_of_measurement: '%'
+    accuracy_decimals: 1
     lambda: |-
         if(id(water_level).state >= id(max_water_level)) {
           return 0;
