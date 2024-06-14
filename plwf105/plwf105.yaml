@@ -52,9 +52,6 @@ wifi:
 
 captive_portal:
 
-esp32_improv:
-  authorizer: none
-
 globals:
   - id: max_water_level
     type: int
