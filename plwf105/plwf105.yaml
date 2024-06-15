@@ -153,8 +153,6 @@ sensor:
         
         return ((id(water_level).state - id(min_water_level)) * 100) / (id(max_water_level) - id(min_water_level));
 
-web_server:
-  
 switch:
   - platform: gpio
     name: 'Pump'
