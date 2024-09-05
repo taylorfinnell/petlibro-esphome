@@ -484,7 +484,7 @@ binary_sensor:
             if(x) { 
               id(red_led).turn_on().perform();
             } else {
-               id(red_led).turn_off().perform();
+              id(red_led).turn_off().perform();
             }
 
 #filter expired
