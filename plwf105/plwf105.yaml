@@ -498,10 +498,13 @@ binary_sensor:
     on_state: 
       then:
         - lambda: |-
-            if(x){
-                id(yellow_led).turn_on();
+            ESP_LOGD("custom", "filter status is : is %i", x);
+            if(x==1){
+                ESP_LOGD("custom", "filter statuasdasds is : is %i", x);
+                id(yellow_led_output).turn_on();
             } else {
-                id(yellow_led).turn_off();
+                ESP_LOGD("custom", "filter staadsastus is : is %i", x);
+                id(yellow_led_output).turn_off();
             }
 
 
@@ -516,7 +519,7 @@ time:
         hours: /1
         then:    
             lambda: |-           
-                ESP_LOGD("custom", "Drinking Roll is : is %i", id(drinking_roll));   
+                ESP_LOGD("custom", "Drinking Roll is : is %i", id(drinking_roll));
                 id(drinking_roll) = id(drinking_roll) + id(drinking_tmp) - id(drinking_roll_24)[id(sntp_time).now().hour];
                 id(drinking_roll_24)[id(sntp_time).now().hour] = id(drinking_tmp);
                 id(drinking_tmp) = 0;
@@ -590,6 +593,16 @@ button:
         for (uint8_t i = 0;i< 25; i++) {
                     id(drinking_roll_24)[i] = 0;
         }
+
+
+  - platform: template
+    name: Turn on red light
+    id:
+    icon: "mdi:file-swap"
+    on_press:
+      #- light.turn_on: yellow_led #this works
+      - lambda: |-
+                id(yellow_led).turn_on().perform(); //This does not work
 
 
 script:
