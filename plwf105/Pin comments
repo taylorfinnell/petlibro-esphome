@@ -1,0 +1,19 @@
+#Pulled comments from the main YAML file and moved here
+
+#␛[0;32mI (460) gpio: GPIO[3]| InputEn: 0| OutputEn: 1| OpenDrain: 0| Pullup: 0| Pulldown: 0| Intr:0 ␛[0m
+#␛[0;32mI (460) BSP_init: GPIO_PUMP_EN: GPIO_OUTPUT_HIGH_LEVEL!␛[0m
+
+#␛[0;32mI (470) gpio: GPIO[10]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 0| Pulldown: 0| Intr:0 ␛[0m
+#␛[0;32mI (480) BSP_init: water_signal: ok!␛[0m
+
+#␛[0;32mI (480) gpio: GPIO[1]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 0| Pulldown: 0| Intr:4 ␛[0m
+#␛[0;32mI (490) BSP_init: Key_init: ok!␛[0m
+
+#␛[0;32mI (490) gpio: GPIO[7]| InputEn: 0| OutputEn: 1| OpenDrain: 0| Pullup: 0| Pulldown: 0| Intr:0 ␛[0m
+#␛[0;32mI (500) BSP_init: AlarmLed_init: ok!␛[0m
+
+#␛[0;32mI (510) gpio: GPIO[6]| InputEn: 0| OutputEn: 1| OpenDrain: 0| Pullup: 0| Pulldown: 0| Intr:0 ␛[0m
+#␛[0;32mI (520) BSP_init: WifiLed_init: ok!␛[0m
+
+#␛[0;32mI (530) gpio: GPIO[18]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:1 ␛[0m
+#␛[0;32mI (520) gpio: GPIO[19]| InputEn: 0| OutputEn: 1| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:0 ␛[0m
