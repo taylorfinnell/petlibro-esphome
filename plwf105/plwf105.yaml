@@ -1,23 +1,10 @@
-#␛[0;32mI (460) gpio: GPIO[3]| InputEn: 0| OutputEn: 1| OpenDrain: 0| Pullup: 0| Pulldown: 0| Intr:0 ␛[0m
-#␛[0;32mI (460) BSP_init: GPIO_PUMP_EN: GPIO_OUTPUT_HIGH_LEVEL!␛[0m
-
-#␛[0;32mI (470) gpio: GPIO[10]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 0| Pulldown: 0| Intr:0 ␛[0m
-#␛[0;32mI (480) BSP_init: water_signal: ok!␛[0m
-
-#␛[0;32mI (480) gpio: GPIO[1]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 0| Pulldown: 0| Intr:4 ␛[0m
-#␛[0;32mI (490) BSP_init: Key_init: ok!␛[0m
-
-#␛[0;32mI (490) gpio: GPIO[7]| InputEn: 0| OutputEn: 1| OpenDrain: 0| Pullup: 0| Pulldown: 0| Intr:0 ␛[0m
-#␛[0;32mI (500) BSP_init: AlarmLed_init: ok!␛[0m
-
-#␛[0;32mI (510) gpio: GPIO[6]| InputEn: 0| OutputEn: 1| OpenDrain: 0| Pullup: 0| Pulldown: 0| Intr:0 ␛[0m
-#␛[0;32mI (520) BSP_init: WifiLed_init: ok!␛[0m
-
-#␛[0;32mI (530) gpio: GPIO[18]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:1 ␛[0m
-#␛[0;32mI (520) gpio: GPIO[19]| InputEn: 0| OutputEn: 1| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:0 ␛[0m
-
-
 substitutions:
+#You should choose to set either hide_oz or hide_ml to true to reduce the number of sensors present in HA
+  hide_oz: "false"
+  hide_ml: "false"
+  
+  hide_debug: "true"
+
   name: "petlibro-plwf105"
   friendly_name: "PetLibro PLWF105"
 
@@ -30,7 +17,8 @@ esphome:
     board_build.f_flash: 40000000L
   project:
     name: petlibro.plwf105
-    version: "1.0.2"
+    version: "1.1.0"
+
 
 esp32:
   board: esp32-c3-devkitm-1
@@ -38,57 +26,137 @@ esp32:
   framework:
     type: esp-idf
 
-logger:
-
 api:
+# uncomment the two lines below to use an encryption key from your secret, or include your own
+#  encryption:
+#    key: !secret encryption_key
+
+logger:
+  level: debug
 
 ota:
+  platform: esphome
+# uncomment the line below to use an ota password from your secret, or include your own
+#  password: !secret ota_password
 
 dashboard_import:
   package_import_url: github://taylorfinnell/petlibro-esphome/plwf105/plwf105.yaml@master
   import_full_config: true
 
 wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
 
 captive_portal:
 
+
+
 globals:
-  - id: max_water_level
+
+#tmp variable to hold whatever value the water was at before an event is detected
+  - id: drinking_event_before
     type: int
-    initial_value: '10000'
-    restore_value: yes
-  - id: min_water_level
-    type: int
+    restore_value: no
     initial_value: '0'
+
+  
+#the amount of water consumed after an event has finished  
+  - id: drinking_event_amount
+    type: int
+    restore_value: no
+
+#This is where the total amount of water over for each hour is stored per index (24 hours total)
+  - id: drinking_roll_24
+    type: int[24]
+    initial_value: '{0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}'
     restore_value: yes
 
+#This is where the total amount of water over 24 hrs is stored
+  - id: drinking_roll
+    type: int
+    restore_value: yes
+
+#temp var to hold the current hours total water, to be pushed into the roll at the top of each hour    
+  - id: drinking_tmp
+    type: int
+    restore_value: yes
+
+
+# The Low level water set from calibrating it yourself
 number:
   - platform: template
     name: "Min Water level"
+    id: min_water_level
+    icon: "mdi:cup-outline"
+    entity_category: config
     optimistic: true
     min_value: -1_000_000_000
     max_value: 1_000_000_000
+    initial_value: '0'
     step: 1
     restore_value: yes
-    on_value:
-      then:
-        - globals.set:
-            id: min_water_level
-            value: !lambda 'return int(x);'
 
-
+# The high level water set from calibrating it yourself
   - platform: template
     name: "Max Water level"
+    id: max_water_level
+    entity_category: config
+    icon: "mdi:cup-water"
     optimistic: true
     min_value: -1_000_000_000
     max_value: 1_000_000_000
+    initial_value: '10000'
     step: 1
     restore_value: yes
-    on_value:
-      then:
-        - globals.set:
-            id: max_water_level
-            value: !lambda 'return int(x);'
+
+# How many days you want a filter to last
+  - platform: template
+    name: "Filter Life (Days)"
+    id: filter_life
+    icon: "mdi:timer-sand-complete"
+    entity_category: config
+    mode: box
+    optimistic: true
+    min_value: 1
+    max_value: 60
+    initial_value: 14
+    step: 1
+    restore_value: yes
+
+# This was done by taking internal water level before. Adding 2 Oz of water, then measuring after. Taking (After_wl - Before_wl) / 2
+  - platform: template
+    name: "Level-Oz Conversion"
+    id: water_oz_conv
+    icon: "mdi:swap-horizontal"
+    disabled_by_default: $hide_oz
+    entity_category: config
+    mode: box
+    optimistic: true
+    min_value: 1
+    max_value: 1_000_000_000
+    initial_value: 11225 
+    step: 0.01
+    restore_value: yes
+# This was done by taking internal water level before. Adding 100 ml of water, then measuring after. Taking (After_wl - Before_wl) / 100
+  - platform: template
+    name: "Level-mL Conversion"
+    id: water_ml_conv
+    disabled_by_default: $hide_ml
+    icon: "mdi:swap-horizontal"
+    entity_category: config
+    mode: box
+    optimistic: true
+    min_value: 1
+    max_value: 1_000_000_000
+    initial_value: 379.59 
+    step: 0.01
+    restore_value: yes
+
+
+
+
+
+
 
 sensor:
   - platform: pulse_counter
@@ -100,7 +168,8 @@ sensor:
     id: errors
 
   - platform: hx711
-    name: "Internal Water Level"
+    name: "Internal Scale"
+    entity_category: diagnostic
     dout_pin:
       number: GPIO18
       mode: INPUT_PULLUP
@@ -112,6 +181,7 @@ sensor:
     gain: 128
     update_interval: 3s
     id: water_level
+    icon: "mdi:scale"
     filters:
       - quantile:
           window_size: 10
@@ -124,6 +194,39 @@ sensor:
           } else {
             return x;
           }
+      - timeout:
+          timeout: 60s
+          value: 0
+  - platform: copy
+    source_id: water_level
+    name: "water 60s delay"
+    filters:
+    - lambda: |-
+        static float q[21] = {0};
+        for (int i = 0; i < 20; i++)
+          q[i] = q[i+1];
+        q[20] = x;
+
+        //Check if the current water level is more than 1k different AND that we aren't already in an event
+        if((abs(x-q[0]) >= 1000) && (id(drinking_event_before) == 0)) {
+          id(drinking_event_before) = q[0]; //set the before val to the oldest val we have. (perhaps swap to using a min value here to deal with bounce)
+        }
+
+        //Now check to see if the water has been stable and we are detecting an event
+        if((id(drinking_event_before) != 0) && (abs(x-q[0]) <= 400) && (x > id(min_water_level).state)){
+          if(id(drinking_event_before) - q[20] > 0){
+
+            id(drinking_event_amount) = id(drinking_event_before) - x;
+            id(drinking_tmp)= id(drinking_tmp) + id(drinking_event_amount); //the _tmp is used to hold all events over an hour, used for a rolling 24hour cumiliatve water
+            id(drinking_event_before) = 0;
+          } else {
+
+            id(drinking_event_before) = 0;
+          }
+        }
+        return q[0];
+
+
 
   - platform: uptime
     name: Uptime
@@ -132,39 +235,204 @@ sensor:
     name: WiFi Signal
     update_interval: 60s
 
+
+# This is a debug value, used to see what the initial water is before an event
+  - platform: template
+    name: Before event
+    id: tmp_before
+    icon: "mdi:water"
+    disabled_by_default: $hide_debug
+    update_interval: 1s
+    state_class: measurement
+    accuracy_decimals: 1
+    lambda: |-
+        return id(drinking_event_before);
+
+# Water level in %
   - platform: template
     name: Water Level
     id: water_level_percentage
+    icon: "mdi:water-percent"
     update_interval: 1s
     state_class: measurement
     unit_of_measurement: '%'
     accuracy_decimals: 1
     lambda: |-
-        if(id(water_level).state >= id(max_water_level)) {
-          return 0;
+        if(id(water_level).state >= id(max_water_level).state) {
+          //this will account for overfills and just keep it at %100
+          return 100;
         }
 
-        if(id(water_level).state <= id(min_water_level)) {
+        if(id(water_level).state <= id(min_water_level).state) {
+          //There will be some water in there but this is the technical 0
           return 0;
         }
-        
-        return ((id(water_level).state - id(min_water_level)) * 100) / (id(max_water_level) - id(min_water_level));
+        return ((id(water_level).state - id(min_water_level).state) * 100) / (id(max_water_level).state - id(min_water_level).state);
+
+# Water level in oz, 'hidden' when $hide_oz is set to true
+  - platform: template
+    name: Water oz
+    id: water_level_oz
+    icon: "mdi:water"
+    update_interval: 1s
+    disabled_by_default: $hide_oz
+    state_class: measurement
+    unit_of_measurement: 'oz'
+    accuracy_decimals: 0
+    lambda: |-
+        if(id(water_level).state <= id(min_water_level).state) {
+          return 0; // account for when the water is below min. There will technically be SOME water in there
+        }
+        return ((id(water_level).state - id(min_water_level).state) / id(water_oz_conv).state);
+
+# Water level in ml, 'hidden' when $hide_ml is set to true
+  - platform: template
+    name: Water mL
+    id: water_level_ml
+    icon: "mdi:water"
+    update_interval: 1s
+    state_class: measurement
+    unit_of_measurement: 'mL'
+    accuracy_decimals: 0
+    lambda: |-
+        if(id(water_level).state <= id(min_water_level).state) {
+          return 0; // account for when the water is below min. There will technically be SOME water in there
+        }
+        return ((id(water_level).state - id(min_water_level).state) / id(water_ml_conv).state);
+
+# This is the amount of water last drinken by the cat (should this blank out after a time?) Debug, OZ, and mL in that order
+  - platform: template
+    name: Last Drink Amount
+    id: water_cons
+    icon: "mdi:water"
+    disabled_by_default: $hide_debug
+    update_interval: 1s
+    state_class: measurement
+    accuracy_decimals: 0
+    lambda: |-
+          return id(drinking_event_amount);
+
+  - platform: template
+    name: Last Drink Amount oz
+    id: water_cons_oz
+    icon: "mdi:water"
+    disabled_by_default: $hide_oz
+    update_interval: 1s
+    state_class: measurement
+    unit_of_measurement: 'oz'
+    accuracy_decimals: 0
+    lambda: |-
+          return id(drinking_event_amount) / id(water_oz_conv).state;
+
+  - platform: template
+    name: Last Drink Amount ml
+    id: water_cons_ml
+    icon: "mdi:water"
+    disabled_by_default: $hide_ml
+    update_interval: 1s
+    state_class: measurement
+    unit_of_measurement: 'mL'
+    accuracy_decimals: 0
+    lambda: |-
+          return id(drinking_event_amount) / id(water_ml_conv).state;
+
+# How much water the cat has drank over the last hour, resets at the top of the hour | Debug, OZ, and mL in that order
+  - platform: template
+    name: Current Hour Water
+    id: cur_water_hour
+    icon: "mdi:water"
+    disabled_by_default: $hide_debug
+    update_interval: 1s
+    state_class: measurement
+    accuracy_decimals: 0
+    lambda: |-
+          return id(drinking_tmp);
+
+  - platform: template
+    name: Current Hour Water oz
+    id: cur_water_hour_oz
+    icon: "mdi:water"
+    disabled_by_default: $hide_oz
+    update_interval: 1s
+    state_class: measurement
+    unit_of_measurement: 'oz'
+    accuracy_decimals: 0
+    lambda: |-
+          return id(drinking_tmp) / id(water_oz_conv).state;
+
+  - platform: template
+    name: Current Hour Water ml
+    id: cur_water_hour_ml
+    icon: "mdi:water"
+    disabled_by_default: $hide_ml
+    update_interval: 1s
+    state_class: measurement
+    unit_of_measurement: 'mL'
+    accuracy_decimals: 0
+    lambda: |-
+          return id(drinking_tmp) / id(water_ml_conv).state;
+
+# How much water the cat has drank over the last 24hrs, it rolls at the top of each hour | Debug, OZ, and mL in that order
+  - platform: template
+    name: Water Consumption 24Hrs
+    id: water_cons_24
+    icon: "mdi:water"
+    disabled_by_default: $hide_debug
+    update_interval: 1s
+    state_class: measurement
+    accuracy_decimals: 0
+    lambda: |-
+          return id(drinking_roll);
+
+  - platform: template
+    name: Water Consumption 24Hrs oz
+    id: water_cons_24_oz
+    icon: "mdi:water"
+    disabled_by_default: $hide_oz
+    update_interval: 1s
+    state_class: measurement
+    unit_of_measurement: 'oz'
+    accuracy_decimals: 0
+    lambda: |-
+          return id(drinking_roll) / id(water_oz_conv).state;
+
+
+  - platform: template
+    name: Water Consumption 24Hrs ml
+    id: water_cons_24_ml
+    icon: "mdi:water"
+    disabled_by_default: $hide_ml
+    update_interval: 1s
+    state_class: measurement
+    unit_of_measurement: 'mL'
+    accuracy_decimals: 0
+    lambda: |-
+          return id(drinking_roll) / id(water_ml_conv).state;
+
+
 
 switch:
+
+# Switch to turn the pump on and off
   - platform: gpio
     name: 'Pump'
+    icon: "mdi:pump"
     pin: 
       number: GPIO3
       mode: OUTPUT
     restore_mode: ALWAYS_ON
 
+
 output:
+
+#Yellow LED
   - platform: gpio
     id: yellow_led_output
     pin:
       number: GPIO6
       mode: OUTPUT
 
+#Red LED
   - platform: gpio
     id: red_led_output
     pin: 
@@ -194,22 +462,145 @@ text_sensor:
     bssid:
       name: BSSID
 
+
 binary_sensor:
+
+#formerly the wi-fi button, but this button isn't being used for anything atm
   - platform: gpio
-    name: "WiFi Button"
+    name: "Front Button"
     pin: 
       number: GPIO1
       mode: INPUT
 
+# this detects if errors is above 9
   - platform: template
     name: "Empty"
+    icon: "mdi:water-alert-outline"
     lambda: |-
       return id(errors).state >= 10;
     on_state:
       then:
         - lambda: |-
             if(x) { 
-              id(red_led_output).turn_on();
+              id(red_led).turn_on().perform();
             } else {
-               id(red_led_output).turn_off();
+              id(red_led).turn_off().perform();
             }
+
+#filter expired
+  - platform: template
+    id: filter_exp
+    name: "Filter Expired"
+    icon: "mdi:filter-remove"
+    lambda: |-
+          return ((id(sntp_time).now().year * 10000) + (id(sntp_time).now().month * 100) + (id(sntp_time).now().day_of_month)) - ((id(filter_exp_date).year * 10000) + (id(filter_exp_date).month * 100) + (id(filter_exp_date).day)) >= 0;
+    on_state: 
+      then:
+        - lambda: |-
+            if(x){
+                id(yellow_led).turn_on().perform();
+            } else {
+                id(yellow_led).turn_off().perform();
+            }
+
+
+
+time:
+  - platform: sntp
+    id: sntp_time
+    timezone: America/Chicago
+    on_time:
+      - seconds: 0
+        minutes: 0
+        hours: /1
+        then:    
+            lambda: |-           
+                id(drinking_roll) = id(drinking_roll) + id(drinking_tmp) - id(drinking_roll_24)[id(sntp_time).now().hour];
+                id(drinking_roll_24)[id(sntp_time).now().hour] = id(drinking_tmp);
+                id(drinking_tmp) = 0;
+
+
+datetime:
+  - platform: template
+    id: filter_install_date
+    entity_category: config
+    type: date
+    name: Filter Install Date
+    icon: "mdi:calendar-import"
+    optimistic: yes
+    initial_value: "1990-12-31"
+    restore_value: true
+    on_value:
+      then:
+        - script.execute: 
+            id: set_filter_exp
+
+            
+  - platform: template
+    id: filter_exp_date
+    icon: "mdi:calendar-remove-outline"
+    entity_category: config
+    type: date
+    name: Filter Exp Date
+    optimistic: yes
+    initial_value: "1990-12-31"
+    restore_value: true
+
+
+
+button:
+  - platform: template
+    name: Filter Changed
+    id: filter_changed_button
+    icon: "mdi:file-swap"
+    on_press:
+    - datetime.date.set:
+        id: filter_install_date
+        date: !lambda 'return id(sntp_time).now();'
+    - datetime.date.set:
+        id: filter_exp_date
+        date: !lambda |-
+                  auto now = id(sntp_time).now();
+                  uint8_t offset = (uint8_t) id(filter_life).state;
+                  for (uint8_t i = 0;i< offset; i++)
+                    now.increment_day();
+                  return now;
+
+
+
+
+  - platform: template
+    name: Clear 24 roll
+    entity_category: config
+    id: reset_24_roll
+    icon: "mdi:file-swap"
+    on_press:
+    - globals.set: 
+        id: drinking_roll     
+        value: '0'
+    - globals.set: 
+        id: drinking_event_before     
+        value: '0'
+    - globals.set: 
+        id: drinking_tmp
+        value: '0'
+    - lambda: |-
+        for (uint8_t i = 0;i< 25; i++) {
+                    id(drinking_roll_24)[i] = 0;
+        }
+
+script:
+  - id: set_filter_exp
+    mode: restart
+    then: 
+    - datetime.date.set:
+        id: filter_exp_date
+        date: !lambda |-
+                  auto now = id(sntp_time).now();
+                  now.day_of_month = id(filter_install_date).day;
+                  now.month = id(filter_install_date).month;
+                  now.year = id(filter_install_date).year ;
+                  uint8_t offset = (uint8_t) id(filter_life).state;
+                  for (uint8_t i = 0;i< offset; i++)
+                    now.increment_day();
+                  return now;
