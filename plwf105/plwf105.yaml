@@ -17,7 +17,7 @@ esphome:
     board_build.f_flash: 40000000L
   project:
     name: petlibro.plwf105
-    version: "1.1.0"
+    version: "1.1.1"
 
 
 esp32:
@@ -278,7 +278,7 @@ sensor:
     disabled_by_default: $hide_oz
     state_class: measurement
     unit_of_measurement: 'oz'
-    accuracy_decimals: 0
+    accuracy_decimals: 2
     lambda: |-
         if(id(water_level).state <= id(min_water_level).state) {
           return 0; // account for when the water is below min. There will technically be SOME water in there
@@ -320,7 +320,7 @@ sensor:
     update_interval: 1s
     state_class: measurement
     unit_of_measurement: 'oz'
-    accuracy_decimals: 0
+    accuracy_decimals: 2
     lambda: |-
           return id(drinking_event_amount) / id(water_oz_conv).state;
 
@@ -356,7 +356,7 @@ sensor:
     update_interval: 1s
     state_class: measurement
     unit_of_measurement: 'oz'
-    accuracy_decimals: 0
+    accuracy_decimals: 2
     lambda: |-
           return id(drinking_tmp) / id(water_oz_conv).state;
 
@@ -392,7 +392,7 @@ sensor:
     update_interval: 1s
     state_class: measurement
     unit_of_measurement: 'oz'
-    accuracy_decimals: 0
+    accuracy_decimals: 2
     lambda: |-
           return id(drinking_roll) / id(water_oz_conv).state;
 
@@ -557,14 +557,9 @@ button:
     - datetime.date.set:
         id: filter_install_date
         date: !lambda 'return id(sntp_time).now();'
-    - datetime.date.set:
-        id: filter_exp_date
-        date: !lambda |-
-                  auto now = id(sntp_time).now();
-                  uint8_t offset = (uint8_t) id(filter_life).state;
-                  for (uint8_t i = 0;i< offset; i++)
-                    now.increment_day();
-                  return now;
+    - script.execute: 
+        id: set_filter_exp
+
 
 
 
