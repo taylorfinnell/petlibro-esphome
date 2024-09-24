@@ -27,7 +27,9 @@ The esphome firmware included in this repository implements (almost) feature par
 
 ## Flashing prereqs
 
+
 If you carefully open the water bowl "base" you will see a PCB holding a `ESP32-C3-WROOM-03`, a `HX7111` and a voltage regulator. There is also one more chip on the board but I am unable to identify it.
+![PCB](https://github.com/user-attachments/assets/cf67e89f-4cc1-4773-8e06-78d1bb700e36)
 
 The PCB very conveniently contains 3 pins that we can use to flash our firmware. `GND`, `TX`, and `RX`.
 The PC has a `VCC` pin that can be used to power to program, but your USB-Serial converter needs to be able to supply enough current. I suggest using the USB plug to power while programing.
