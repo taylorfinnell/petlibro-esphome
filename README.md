@@ -22,6 +22,8 @@ The esphome firmware included in this repository implements (almost) feature par
 - Pump error indicator
 - water consumption tracking
 - water reporting in oz and ml
+- configurable pump intervals
+- integreated calibration process
 
 ## Flashing prereqs
 
@@ -55,7 +57,11 @@ Here is how it looks in HomeAssistant:
 
 ![Result](https://github.com/user-attachments/assets/24344f14-f331-4fa7-b6bd-9aeaddb32a11)
 
+## Calibration
 
+1) The fountain will now be in calibration mode (slow flashing yellow light).
+2) With the water a the min fill line and fully assembled, hit the "wifi" button (or enter the number yourself in the home assistant UI)
+3) The light should flash fast now, with the water a the max fill line and fully assembled, hit the "wifi" button (or enter the number yourself in the home assistant UI)
 
 
 # plwf108
