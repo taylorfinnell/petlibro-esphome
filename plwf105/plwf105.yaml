@@ -17,7 +17,17 @@ esphome:
     board_build.f_flash: 40000000L
   project:
     name: petlibro.plwf105
-    version: "1.1.0"
+    version: "1.2.0"
+  on_boot:
+    priority: 200
+    then:
+      - lambda: |-
+          if(id(button_mode).state==0){
+              id(yellow_led).turn_on().set_effect("Slow_Blink").perform();
+              }
+          if(id(button_mode).state==1){
+              id(yellow_led).turn_on().set_effect("Fast_Blink").perform();
+              }
 
 
 esp32:
@@ -81,6 +91,14 @@ globals:
     type: int
     restore_value: yes
 
+#temp var to hold the current mins for pump intervals
+  - id: pump_time_tmp
+    type: int
+    restore_value: no
+    initial_value: '0'
+
+
+
 
 # The Low level water set from calibrating it yourself
 number:
@@ -95,6 +113,23 @@ number:
     initial_value: '0'
     step: 1
     restore_value: yes
+    on_value: 
+      then:
+        - lambda: |- 
+            if(id(button_mode).state==0){
+                id(yellow_led).turn_off().perform();
+                id(button_mode).make_call().set_value(1).perform();
+            }
+            else if(id(button_mode).state==1){
+                id(yellow_led).turn_off().perform();
+                if(id(front_filter).state==1){
+                  id(button_mode).make_call().set_value(2).perform();
+                } else {
+                  id(button_mode).make_call().set_value(3).perform();
+                }
+                
+            }
+        
 
 # The high level water set from calibrating it yourself
   - platform: template
@@ -108,6 +143,22 @@ number:
     initial_value: '10000'
     step: 1
     restore_value: yes
+    on_value: 
+      then:
+        - lambda: |- 
+            if(id(button_mode).state==0){
+                id(yellow_led).turn_off().perform();
+                id(button_mode).make_call().set_value(1).perform();
+            }
+            else if(id(button_mode).state==1){
+                id(yellow_led).turn_off().perform();
+                if(id(front_filter).state==1){
+                  id(button_mode).make_call().set_value(2).perform();
+                } else {
+                  id(button_mode).make_call().set_value(3).perform();
+                }
+                
+            }
 
 # How many days you want a filter to last
   - platform: template
@@ -152,7 +203,63 @@ number:
     step: 0.01
     restore_value: yes
 
+    # How long to keep the pump on for
+  - platform: template
+    name: "Pump On (mins)"
+    id: pump_on
+    icon: "mdi:timer-sand-complete"
+    entity_category: config
+    mode: box
+    optimistic: true
+    min_value: 1
+    max_value: 120
+    initial_value: 10
+    step: 1
+    restore_value: yes
 
+    # How long to keep the pump off for
+  - platform: template
+    name: "Pump Off (mins)"
+    id: pump_off
+    icon: "mdi:timer-sand-complete"
+    entity_category: config
+    mode: box
+    optimistic: true
+    min_value: 1
+    max_value: 120
+    initial_value: 10
+    step: 1
+    restore_value: yes
+
+#current state on how we are treating the front button 0 cal low, 1 cal high, 2 normal reset filter, 3 button disabled
+  - platform: template
+    name: button mode
+    id: button_mode
+    internal: True
+    mode: box
+    optimistic: true
+    min_value: 0
+    max_value: 3
+    initial_value: 0
+    step: 1
+    restore_value: yes
+    on_value: 
+      then:
+        - lambda: |-
+            if(x==0){
+                id(yellow_led).turn_on().set_effect("Slow_Blink").perform();
+                }
+            if(x==1){
+                id(yellow_led).turn_on().set_effect("Fast_Blink").perform();
+                }
+            if(x==2){
+                id(yellow_led).turn_off().perform();
+              }
+            if(x==3){
+                id(yellow_led).turn_off().perform();
+              }
+        
+            
 
 
 
@@ -197,6 +304,7 @@ sensor:
       - timeout:
           timeout: 60s
           value: 0
+# This holds the water from 60s ago          
   - platform: copy
     source_id: water_level
     name: "water 60s delay"
@@ -278,7 +386,7 @@ sensor:
     disabled_by_default: $hide_oz
     state_class: measurement
     unit_of_measurement: 'oz'
-    accuracy_decimals: 0
+    accuracy_decimals: 2
     lambda: |-
         if(id(water_level).state <= id(min_water_level).state) {
           return 0; // account for when the water is below min. There will technically be SOME water in there
@@ -320,7 +428,7 @@ sensor:
     update_interval: 1s
     state_class: measurement
     unit_of_measurement: 'oz'
-    accuracy_decimals: 0
+    accuracy_decimals: 2
     lambda: |-
           return id(drinking_event_amount) / id(water_oz_conv).state;
 
@@ -356,7 +464,7 @@ sensor:
     update_interval: 1s
     state_class: measurement
     unit_of_measurement: 'oz'
-    accuracy_decimals: 0
+    accuracy_decimals: 2
     lambda: |-
           return id(drinking_tmp) / id(water_oz_conv).state;
 
@@ -392,7 +500,7 @@ sensor:
     update_interval: 1s
     state_class: measurement
     unit_of_measurement: 'oz'
-    accuracy_decimals: 0
+    accuracy_decimals: 2
     lambda: |-
           return id(drinking_roll) / id(water_oz_conv).state;
 
@@ -416,11 +524,47 @@ switch:
 # Switch to turn the pump on and off
   - platform: gpio
     name: 'Pump'
+    id: Pump
     icon: "mdi:pump"
     pin: 
       number: GPIO3
       mode: OUTPUT
     restore_mode: ALWAYS_ON
+
+# Switch to either use or not use the front button to reset the filter life
+  - platform: template
+    name: "Front Button Resets Filter"
+    icon: "mdi:filter-settings"
+    entity_category: config
+    id: front_filter
+    restore_mode: RESTORE_DEFAULT_ON
+    optimistic: True
+    turn_on_action:
+      - lambda: 
+            if(id(button_mode).state==2){
+                id(button_mode).make_call().set_value(3).perform();
+            }
+    turn_off_action:
+      - lambda: 
+            if(id(button_mode).state==3){
+                id(button_mode).make_call().set_value(2).perform();
+            }
+
+
+# Switch to enable the pump interval timings
+  - platform: template
+    name: "Pump Interval"
+    icon: "mdi:pump-off"
+    entity_category: config
+    id: pump_interval
+    restore_mode: RESTORE_DEFAULT_OFF
+    optimistic: True
+    turn_off_action: 
+      then:
+        - lambda: |-
+            id(pump_time_tmp)=0;
+            
+
 
 
 output:
@@ -444,11 +588,41 @@ light:
     name: "Red LED"
     output: red_led_output
     id: red_led
+    effects: 
+      - strobe:
+          name: Slow_Blink
+          colors:
+            - state: True
+              duration: 500ms
+            - state: False
+              duration: 500ms
+      - strobe:
+          name: Fast_Blink
+          colors:
+            - state: True
+              duration: 100ms
+            - state: False
+              duration: 100ms
 
   - platform: binary
     name: "Yellow LED"
     output: yellow_led_output
     id: yellow_led
+    effects: 
+      - strobe:
+          name: Slow_Blink
+          colors:
+            - state: True
+              duration: 500ms
+            - state: False
+              duration: 500ms
+      - strobe:
+          name: Fast_Blink
+          colors:
+            - state: True
+              duration: 100ms
+            - state: False
+              duration: 100ms
 
 text_sensor:
   - platform: version
@@ -465,12 +639,39 @@ text_sensor:
 
 binary_sensor:
 
-#formerly the wi-fi button, but this button isn't being used for anything atm
+#formerly the wi-fi button, used for calibration and restting the filter
   - platform: gpio
     name: "Front Button"
     pin: 
       number: GPIO1
-      mode: INPUT
+      mode:
+        input: true
+        pulldown: true
+    on_release: 
+      then:
+        - lambda: |-
+            if(id(button_mode).state==0){
+                id(min_water_level).make_call().set_value(id(water_level).state).perform();
+                id(yellow_led).turn_off().perform();
+                id(button_mode).make_call().set_value(1).perform();
+            }
+            else if(id(button_mode).state==1){
+                id(max_water_level).make_call().set_value(id(water_level).state).perform();
+                id(yellow_led).turn_off().perform();
+                if(id(front_filter).state==1){
+                  id(button_mode).make_call().set_value(2).perform();
+                } else {
+                  id(button_mode).make_call().set_value(3).perform();
+                }
+                
+            }
+            else if(id(button_mode).state==2){
+                id(filter_changed_button).press();
+                id(yellow_led).turn_off().perform();
+            }
+            else if(id(button_mode).state==3){
+                // Do nothing
+            }
 
 # this detects if errors is above 9
   - platform: template
@@ -482,7 +683,7 @@ binary_sensor:
       then:
         - lambda: |-
             if(x) { 
-              id(red_led).turn_on().perform();
+              id(red_led).turn_on().set_effect("Fast_Blink").perform();
             } else {
               id(red_led).turn_off().perform();
             }
@@ -546,6 +747,26 @@ datetime:
     initial_value: "1990-12-31"
     restore_value: true
 
+interval:
+  - interval: 1min
+    then:
+      - lambda: |-
+          if(id(pump_interval).state){
+            id(pump_time_tmp)=id(pump_time_tmp)+1;
+            if(id(Pump).state){
+              if(id(pump_time_tmp)>=int(id(pump_on).state)){
+                id(Pump).turn_off();
+                id(pump_time_tmp)=0;
+              }
+            } else {
+              if(id(pump_time_tmp)>=int(id(pump_off).state)){
+                id(Pump).turn_on();
+                id(pump_time_tmp)=0;
+              }
+            }
+          }
+          
+          
 
 
 button:
@@ -557,14 +778,8 @@ button:
     - datetime.date.set:
         id: filter_install_date
         date: !lambda 'return id(sntp_time).now();'
-    - datetime.date.set:
-        id: filter_exp_date
-        date: !lambda |-
-                  auto now = id(sntp_time).now();
-                  uint8_t offset = (uint8_t) id(filter_life).state;
-                  for (uint8_t i = 0;i< offset; i++)
-                    now.increment_day();
-                  return now;
+    - script.execute: 
+        id: set_filter_exp
 
 
 
@@ -588,6 +803,17 @@ button:
         for (uint8_t i = 0;i< 25; i++) {
                     id(drinking_roll_24)[i] = 0;
         }
+
+
+  - platform: template
+    name: Start Calibration
+    entity_category: config
+    id: calibrate
+    icon: "mdi:scale-unbalanced"
+    on_press:
+    - lambda: |-
+        id(button_mode).make_call().set_value(0).perform();
+        
 
 script:
   - id: set_filter_exp
