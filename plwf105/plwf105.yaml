@@ -308,6 +308,7 @@ sensor:
   - platform: copy
     source_id: water_level
     name: "water 60s delay"
+    internal: True
     filters:
     - lambda: |-
         static float q[21] = {0};
