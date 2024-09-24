@@ -17,11 +17,21 @@ esphome:
     board_build.f_flash: 40000000L
   project:
     name: petlibro.plwf105
-    version: "1.2.0"
+    version: "1.2.1"
   on_boot:
     priority: 200
     then:
       - lambda: |-
+          if (int(id(min_water_level).state) != 0){
+            id(button_mode).make_call().set_value(1).perform();
+          }
+          if (int(id(max_water_level).state) != 1000){
+            if(id(front_filter).state==1){
+              id(button_mode).make_call().set_value(2).perform();
+            } else {
+              id(button_mode).make_call().set_value(3).perform();
+            }
+          }
           if(id(button_mode).state==0){
               id(yellow_led).turn_on().set_effect("Slow_Blink").perform();
               }
@@ -308,7 +318,6 @@ sensor:
   - platform: copy
     source_id: water_level
     name: "water 60s delay"
-    internal: True
     filters:
     - lambda: |-
         static float q[21] = {0};
