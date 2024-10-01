@@ -577,6 +577,12 @@ switch:
 
 
 
+# Time interval for pump cycling.
+#interval:
+#  - interval: 10min
+#    then:
+#      - switch.toggle: pump_switch
+
 output:
 
 #Yellow LED
