@@ -17,7 +17,7 @@ esphome:
     board_build.f_flash: 40000000L
   project:
     name: petlibro.plwf105
-    version: "1.2.3"
+    version: "1.2.4"
   on_boot:
     priority: 200
     then:
@@ -38,6 +38,11 @@ esphome:
           if(id(button_mode).state==1){
               id(yellow_led).turn_on().set_effect("Fast_Blink").perform();
               }
+          if(id(filter_exp).state){
+                id(yellow_led).turn_on().perform();
+            } else {
+                id(yellow_led).turn_off().perform();
+            }
 
 
 esp32:
