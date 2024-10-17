@@ -17,7 +17,7 @@ esphome:
     board_build.f_flash: 40000000L
   project:
     name: petlibro.plwf105
-    version: "1.2.1"
+    version: "1.2.3"
   on_boot:
     priority: 200
     then:
@@ -321,18 +321,24 @@ sensor:
     filters:
     - lambda: |-
         static float q[21] = {0};
-        for (int i = 0; i < 20; i++)
+        float qmax=0;
+        float qmin = 1000000000;
+        for (int i = 0; i < 20; i++){
           q[i] = q[i+1];
+          if(q[i]<qmin){qmin=q[i];}
+          if(q[i]>qmax){qmax=q[i];}
+        }
         q[20] = x;
 
-        //Check if the current water level is more than 1k different AND that we aren't already in an event
-        if((abs(x-q[0]) >= 1000) && (id(drinking_event_before) == 0)) {
+        //Check if the current water level is more than 1k different AND that we aren't already in an event AND that water is above min level
+        if(((abs(x-q[0]) >= 1000) && (id(drinking_event_before) == 0) && (x > id(min_water_level).state))) {
           id(drinking_event_before) = q[0]; //set the before val to the oldest val we have. (perhaps swap to using a min value here to deal with bounce)
         }
 
-        //Now check to see if the water has been stable and we are detecting an event
-        if((id(drinking_event_before) != 0) && (abs(x-q[0]) <= 400) && (x > id(min_water_level).state)){
-          if(id(drinking_event_before) - q[20] > 0){
+        //Now check to see if the water has been stable and we are in an event
+        if((id(drinking_event_before) != 0) && (abs(qmax-qmin) <= 400) && (x > id(min_water_level).state)){
+          //Make sure the event is above 400 and below 67350 (~.03oz and ~6oz)
+          if((id(drinking_event_before) - q[20] > 400) && (id(drinking_event_before) - q[20] < 67350)){
 
             id(drinking_event_amount) = id(drinking_event_before) - x;
             id(drinking_tmp)= id(drinking_tmp) + id(drinking_event_amount); //the _tmp is used to hold all events over an hour, used for a rolling 24hour cumiliatve water
@@ -577,12 +583,6 @@ switch:
 
 
 
-# Time interval for pump cycling.
-#interval:
-#  - interval: 10min
-#    then:
-#      - switch.toggle: pump_switch
-
 output:
 
 #Yellow LED
@@ -721,6 +721,14 @@ binary_sensor:
             }
 
 
+# this detects if the water tank is removed
+  - platform: template
+    name: "Tank Removed"
+    icon: "mdi:watering-can-outline"
+    lambda: |-
+      return id(water_level).state < id(min_water_level).state - 150000;
+    
+
 
 time:
   - platform: sntp
@@ -846,3 +854,5 @@ script:
                   for (uint8_t i = 0;i< offset; i++)
                     now.increment_day();
                   return now;
+
+#### In Loving Memory Of Tuxey Putnam 2006-2024 ######
