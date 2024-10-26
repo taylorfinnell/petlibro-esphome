@@ -23,7 +23,7 @@ The esphome firmware included in this repository implements (almost) feature par
 - water consumption tracking
 - water reporting in oz and ml
 - configurable pump intervals
-- integreated calibration process
+- integrated calibration process
 
 ## Flashing prereqs
 
