@@ -1,17 +1,23 @@
 # petlibro-esphome
 
-A collection of esphome  firmwares for Petlibro devices.
+A collection of alternative DIY open-source [ESPHome firmware](https://esphome.io) for [Petlibro](https://petlibro.com) series of smart cat/dog food feeders and water fountains devices.
 
+Petlibro makes WiFi-connected pet food feeders and water fountains based on ESP8266/ESP32 microcontrollers from Espressif. Their default firmware requires that you use their Petlibro mobile application to create an account and it must via that be connected to their cloud (but use MQTT to communicate internally). 
 
-# plwf105
+This ESPHome firmware implements local LAN support with almost feature-parity as stock firmware without need for cloud/WAN connection.
 
-An esphome firmware for [PLWF105](https://www.amazon.com/dp/B0BSFB2D37) automatic water bowl (also called the Dockstream or the PETLIBRO App Monitoring Cat Water Fountain with Wireless Pump) by Petlibro. 
+# Dockstream Smart Fountain (PLWF105)
 
-## About
+An esphome firmware for PLWF105 automatic water bowl (also called the Dockstream Smart Fountain or the PETLIBRO App Monitoring Cat Water Fountain with Wireless Pump) by Petlibro. 
 
-The default firmware, which is included in this respository requires use of the Petlibro application and must be cloud connected. Internally the firmware uses MQTT to communicate.
+PLWF105 is available in either white-colored variant or black-colored variant of the same model:
 
-The esphome firmware included in this repository implements (almost) feature parity as the stock firmware without the need for the third party cloud, or any WAN connection for that matter.
+* https://petlibro.com/products/dockstream-app-monitoring-water-fountain
+  * https://www.amazon.com/dp/B0BSFB2D37
+
+## About this ESPHome firmware for plwf105
+
+This ESPHome firmware for plwf105 implements (almost) feature parity as the stock firmware but supports only local connections (instead of requiring cloud connection).
 
 ### Supported Features
 
@@ -26,7 +32,6 @@ The esphome firmware included in this repository implements (almost) feature par
 - integrated calibration process
 
 ## Flashing prereqs
-
 
 If you carefully open the water bowl "base" you will see a PCB holding a `ESP32-C3-WROOM-03`, a `HX7111` and a voltage regulator. There is also one more chip on the board but I am unable to identify it.
 ![PCB](https://github.com/user-attachments/assets/cf67e89f-4cc1-4773-8e06-78d1bb700e36)
@@ -66,15 +71,18 @@ Here is how it looks in HomeAssistant:
 3) The light should flash fast now, with the water a the max fill line and fully assembled, hit the "wifi" button (or enter the number yourself in the home assistant UI)
 
 
-# plwf108
+# Petlibro Air Smart Feeder (PLAF108 model)
 
-An esphome firmware for [PLAF108](https://www.amazon.com/dp/B0CDC3WK46) automatic pet feeder (also called the Air feeder) by Petlibro.
+An ESPHome firmware for PLAF108 automatic pet feeder (also called the Air Smart Feeder) by Petlibro.
 
-## About
+PLAF108 is available in either white-colored variant or black-colored variant of the same model:
 
-The default firmware, which is included in this respository requires use of the Petlibro application and must be cloud connected. Internally the firmware uses MQTT to communicate.
+* https://petlibro.com/products/air-wifi-feeder
+  * https://www.amazon.com/dp/B0CDC3WK46
 
-The esphome firmware included in this repository implements (almost) feature parity as the stock firmware without the need for the third party cloud, or any WAN connection for that matter.
+## About this ESPHome firmware for PLAF108
+
+This ESPHome firmware for PLAF108 implements (almost) feature parity as the stock firmware but supports only local connections (instead of requiring cloud connection).
 
 ### Supported Features
 
@@ -89,7 +97,7 @@ The esphome firmware included in this repository implements (almost) feature par
 
 ### Unknowns
 
-I do not know what GPIO0 and GPIO1 are for. I think it's for the DC current sensor to maybe determine battery charge. But, that's a guess.
+I do not know what GPIO0 and GPIO1 are for. I think it's for the DC-power current sensor to maybe determine battery charge. But, that's a guess.
 
 ## Flashing prereqs
 
