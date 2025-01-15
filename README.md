@@ -37,6 +37,8 @@ The PCB also has two pads on the lower right corner labled `B` and `G`. These pa
 
 ## Flashing
 
+0) You will need to generate a firmware .bin file from ESPHome based on the .yaml file in this repo.  
+
 1) Plug the USB to serial converter into your computer and hook up to the pin holes as described below. Do NOT power the board/fountain yet.
 
 
@@ -51,7 +53,9 @@ You don't even need to solder anything most likely. I was able to hold the pins 
 2) Take a small wire and hold it on the `B` and `G` pads described above.
 3) While still holding the wire in place, plug in the pumps USB cable.
 4) At this point the board should be in programming mode.
-5) Flash the firmware in this repo.
+5) Flash the firmware you created above.  You can use use https://web.esphome.io/ to do the flashing.
+
+If you run into problems or otherwise need to revert, you can reflash back to stock firmware using the .bin file in this repo.
 
 ## Result
 
