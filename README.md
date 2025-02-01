@@ -61,9 +61,10 @@ Here is how it looks in HomeAssistant:
 
 ## Calibration
 
-1) The fountain will now be in calibration mode (slow flashing yellow light).
-2) With the water a the min fill line and fully assembled, hit the "wifi" button (or enter the number yourself in the home assistant UI)
-3) The light should flash fast now, with the water a the max fill line and fully assembled, hit the "wifi" button (or enter the number yourself in the home assistant UI)
+1) The water fountain will automatically enter calibration mode after a flash or after hitting "Start Calibration" in the home assistant UI
+2) The fountain will now be in calibration mode (slow flashing yellow light).
+3) With the water a the min fill line and fully assembled, hit the "wifi" button (or enter the number yourself in the home assistant UI)
+4) The light should flash fast now, with the water a the max fill line and fully assembled, hit the "wifi" button (or enter the number yourself in the home assistant UI)
 
 
 # plwf108
