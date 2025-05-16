@@ -1,0 +1,233 @@
+defaults:
+  hide_oz:                    "false"
+  hide_ml:                    "false"
+
+  hide_debug:                 "true"
+
+  update_interval:            "1s"
+
+globals:
+
+  # Temp variable to hold whatever value the water was at before an event is detected
+  - id:                       drinking_event_before
+    type:                     int
+    restore_value:            no
+    initial_value:            "0"
+
+  # The amount of water consumed after an event has finished
+  - id:                       drinking_event_amount
+    type:                     int
+    restore_value:            no
+
+  # This is where the total amount of water over for each hour is stored per index (24 hours total)
+  - id:                       drinking_roll_24
+    type:                     int[24]
+    initial_value:            "{0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}"
+    restore_value:            yes
+
+  # This is where the total amount of water over 24 hrs is stored
+  - id:                       drinking_roll
+    type:                     int
+    restore_value:            yes
+
+  # Temp var to hold the current hours total water, to be pushed into the roll at the top of each hour
+  - id:                       drinking_tmp
+    type:                     int
+    restore_value:            yes
+
+  # Temp var to hold the current mins for pump intervals
+  - id:                       pump_time_tmp
+    type:                     int
+    restore_value:            no
+    initial_value:            "0"
+
+sensor:
+  # This holds the water from 60s ago
+  - platform:                 copy
+    source_id:                water_level
+    name:                     water 60s delay
+    filters:
+    - lambda: |-
+        static float q[21] = {0};
+        float qmax=0;
+        float qmin = 1000000000;
+        for (int i = 0; i < 20; i++){
+          q[i] = q[i+1];
+          if(q[i]<qmin){qmin=q[i];}
+          if(q[i]>qmax){qmax=q[i];}
+        }
+        q[20] = x;
+
+        //Check if the current water level is more than 1k different AND that we aren't already in an event AND that water is above min level
+        if(((abs(x-q[0]) >= 1000) && (id(drinking_event_before) == 0) && (x > id(min_water_level).state))) {
+          id(drinking_event_before) = q[0]; //set the before val to the oldest val we have. (perhaps swap to using a min value here to deal with bounce)
+        }
+
+        //Now check to see if the water has been stable and we are in an event
+        if((id(drinking_event_before) != 0) && (abs(qmax-qmin) <= 400) && (x > id(min_water_level).state)){
+          //Make sure the event is above 400 and below 67350 (~.03oz and ~6oz)
+          if((id(drinking_event_before) - q[20] > 400) && (id(drinking_event_before) - q[20] < 67350)){
+
+            id(drinking_event_amount) = id(drinking_event_before) - x;
+            id(drinking_tmp)= id(drinking_tmp) + id(drinking_event_amount); //the _tmp is used to hold all events over an hour, used for a rolling 24hour cumiliatve water
+            id(drinking_event_before) = 0;
+          } else {
+
+            id(drinking_event_before) = 0;
+          }
+        }
+        return q[0];
+
+  # This is a debug value, used to see what the initial water is before an event
+  - platform:                 template
+    id:                       tmp_before
+    name:                     Before event
+    icon:                     mdi:water
+    disabled_by_default:      "${hide_debug}"
+    update_interval:          "${update_interval}"
+    state_class:              measurement
+    accuracy_decimals:        1
+    lambda: |-
+        return id(drinking_event_before);
+
+  # This is the amount of water last drinken by the cat (should this blank out after a time?) Debug, OZ, and mL in that order
+  - platform:                 template
+    id:                       water_cons
+    name:                     Last Drink Amount
+    icon:                     mdi:water
+    disabled_by_default:      "${hide_debug}"
+    update_interval:          "${update_interval}"
+    state_class:              measurement
+    accuracy_decimals:        0
+    lambda: |-
+          return id(drinking_event_amount);
+
+  - platform:                 template
+    id:                       water_cons_oz
+    name:                     Last Drink Amount oz
+    icon:                     mdi:water
+    disabled_by_default:      "${hide_oz}"
+    update_interval:          "${update_interval}"
+    state_class:              measurement
+    unit_of_measurement:      oz
+    accuracy_decimals:        2
+    lambda: |-
+          return id(drinking_event_amount) / id(water_oz_conv).state;
+
+  - platform:                 template
+    id:                       water_cons_ml
+    name:                     Last Drink Amount ml
+    icon:                     mdi:water
+    disabled_by_default:      "${hide_ml}"
+    update_interval:          "${update_interval}"
+    state_class:              measurement
+    unit_of_measurement:      mL
+    accuracy_decimals:        0
+    lambda: |-
+          return id(drinking_event_amount) / id(water_ml_conv).state;
+
+  # How much water the cat has drank over the last hour, resets at the top of the hour | Debug, OZ, and mL in that order
+  - platform:                 template
+    id:                       cur_water_hour
+    name:                     Current Hour Water
+    icon:                     mdi:water
+    disabled_by_default:      "${hide_debug}"
+    update_interval:          "${update_interval}"
+    state_class:              measurement
+    accuracy_decimals:        0
+    lambda: |-
+          return id(drinking_tmp);
+
+  - platform:                 template
+    id:                       cur_water_hour_oz
+    name:                     Current Hour Water oz
+    icon:                     mdi:water
+    disabled_by_default:      "${hide_oz}"
+    update_interval:          "${update_interval}"
+    state_class:              measurement
+    unit_of_measurement:      oz
+    accuracy_decimals:        2
+    lambda: |-
+          return id(drinking_tmp) / id(water_oz_conv).state;
+
+  - platform:                 template
+    id:                       cur_water_hour_ml
+    name:                     Current Hour Water ml
+    icon:                     mdi:water
+    disabled_by_default:      "${hide_ml}"
+    update_interval:          "${update_interval}"
+    state_class:              measurement
+    unit_of_measurement:      mL
+    accuracy_decimals:        0
+    lambda: |-
+          return id(drinking_tmp) / id(water_ml_conv).state;
+
+# How much water the cat has drank over the last 24hrs, it rolls at the top of each hour | Debug, OZ, and mL in that order
+  - platform:                 template
+    id:                       water_cons_24
+    name:                     Water Consumption 24Hrs
+    icon:                     mdi:water
+    disabled_by_default:      "${hide_debug}"
+    update_interval:          "${update_interval}"
+    state_class:              measurement
+    accuracy_decimals:        0
+    lambda: |-
+          return id(drinking_roll);
+
+  - platform:                 template
+    id:                       water_cons_24_oz
+    name:                     Water Consumption 24Hrs oz
+    icon:                     mdi:water
+    disabled_by_default:      "${hide_oz}"
+    update_interval:          "${update_interval}"
+    state_class:              measurement
+    unit_of_measurement:      oz
+    accuracy_decimals:        2
+    lambda: |-
+          return id(drinking_roll) / id(water_oz_conv).state;
+
+
+  - platform:                 template
+    id:                       water_cons_24_ml
+    name:                     Water Consumption 24Hrs ml
+    icon:                     mdi:water
+    disabled_by_default:      "${hide_ml}"
+    update_interval:          "${update_interval}"
+    state_class:              measurement
+    unit_of_measurement:      mL
+    accuracy_decimals:        0
+    lambda: |-
+          return id(drinking_roll) / id(water_ml_conv).state;
+
+button:
+  - platform:                 template
+    id:                       reset_24_roll
+    name:                     Clear 24 roll
+    entity_category:          config
+    icon:                     mdi:file-swap
+    on_press:
+    - globals.set:
+        id:                   drinking_roll
+        value:                "0"
+    - globals.set:
+        id:                   drinking_event_before
+        value:                "0"
+    - globals.set:
+        id:                   drinking_tmp
+        value:                "0"
+    - lambda: |-
+        for (uint8_t i = 0;i< 25; i++) {
+          id(drinking_roll_24)[i] = 0;
+        }
+
+time:
+  - id:                       !extend sntp_time
+    on_time:
+      - seconds:              "0"
+        minutes:              "0"
+        hours:                "/1"
+        then:
+          lambda: |-
+            id(drinking_roll) = id(drinking_roll) + id(drinking_tmp) - id(drinking_roll_24)[id(sntp_time).now().hour];
+            id(drinking_roll_24)[id(sntp_time).now().hour] = id(drinking_tmp);
+            id(drinking_tmp) = 0;

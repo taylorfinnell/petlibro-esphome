@@ -1,0 +1,142 @@
+defaults:
+  hide_oz:                    "false"
+  hide_ml:                    "false"
+
+  update_interval:            "1s"
+
+esphome:
+  on_boot:
+    priority:                 200
+    then:
+      - lambda: |-
+          if (int(id(min_water_level).state) != 0){
+            id(button_mode).make_call().set_value(1).perform();
+          }
+          if (int(id(max_water_level).state) != 1000){
+            if(id(front_filter).state==1){
+              id(button_mode).make_call().set_value(2).perform();
+            } else {
+              id(button_mode).make_call().set_value(3).perform();
+            }
+          }
+          if(id(button_mode).state==0){
+              id(yellow_led).turn_on().set_effect("Slow_Blink").perform();
+              }
+          if(id(button_mode).state==1){
+              id(yellow_led).turn_on().set_effect("Fast_Blink").perform();
+              }
+          if(id(filter_exp).state){
+                id(yellow_led).turn_on().perform();
+            } else {
+                id(yellow_led).turn_off().perform();
+            }
+
+# The Low level water set from calibrating it yourself
+number:
+  - id:                       !extend min_water_level
+    on_value:
+      then:
+        - lambda: |-
+            if(id(button_mode).state==0){
+                id(yellow_led).turn_off().perform();
+                id(button_mode).make_call().set_value(1).perform();
+            }
+            else if(id(button_mode).state==1){
+                id(yellow_led).turn_off().perform();
+                if(id(front_filter).state==1){
+                  id(button_mode).make_call().set_value(2).perform();
+                } else {
+                  id(button_mode).make_call().set_value(3).perform();
+                }
+
+            }
+
+  - id:                     !extend min_water_level
+    on_value:
+      then:
+        - lambda: |-
+            if(id(button_mode).state==0){
+                id(yellow_led).turn_off().perform();
+                id(button_mode).make_call().set_value(1).perform();
+            }
+            else if(id(button_mode).state==1){
+                id(yellow_led).turn_off().perform();
+                if(id(front_filter).state==1){
+                  id(button_mode).make_call().set_value(2).perform();
+                } else {
+                  id(button_mode).make_call().set_value(3).perform();
+                }
+
+            }
+
+  # This was done by taking internal water level before. Adding 2 Oz of water, then measuring after. Taking (After_wl - Before_wl) / 2
+  - platform:                 template
+    id:                       water_oz_conv
+    name:                     Level-Oz Conversion
+    icon:                     mdi:swap-horizontal
+    disabled_by_default:      "${hide_oz}"
+    entity_category:          config
+    mode:                     box
+    optimistic:               true
+    min_value:                1
+    max_value:                1_000_000_000
+    initial_value:            11225
+    step:                     0.01
+    restore_value:            yes
+
+  # This was done by taking internal water level before. Adding 100 ml of water, then measuring after. Taking (After_wl - Before_wl) / 100
+  - platform:                 template
+    id:                       water_ml_conv
+    name:                     Level-mL Conversion
+    disabled_by_default:      "${hide_ml}"
+    icon:                     mdi:swap-horizontal
+    entity_category:          config
+    mode:                     box
+    optimistic:               true
+    min_value:                1
+    max_value:                1_000_000_000
+    initial_value:            379.59
+    step:                     0.01
+    restore_value:            yes
+
+sensor:
+  # Water level in oz, 'hidden' when $hide_oz is set to true
+  - platform:                 template
+    id:                       water_level_oz
+    name:                     Water oz
+    icon:                     mdi:water
+    update_interval:          "${update_interval}"
+    disabled_by_default:      "${hide_oz}"
+    state_class:              measurement
+    unit_of_measurement:      oz
+    accuracy_decimals:        2
+    lambda: |-
+      if(id(water_level).state <= id(min_water_level).state) {
+        return 0; // account for when the water is below min. There will technically be SOME water in there
+      }
+      return ((id(water_level).state - id(min_water_level).state) / id(water_oz_conv).state);
+
+  # Water level in ml, 'hidden' when $hide_ml is set to true
+  - platform:                 template
+    id:                       water_level_ml
+    name:                     Water mL
+    icon:                     mdi:water
+    update_interval:          "${update_interval}"
+    state_class:              measurement
+    unit_of_measurement:      mL
+    accuracy_decimals:        0
+    lambda: |-
+      if(id(water_level).state <= id(min_water_level).state) {
+        return 0; // account for when the water is below min. There will technically be SOME water in there
+      }
+      return ((id(water_level).state - id(min_water_level).state) / id(water_ml_conv).state);
+
+button:
+  - platform:                 template
+    id:                       calibrate
+    name:                     Start Calibration
+    entity_category:          config
+    icon:                     mdi:scale-unbalanced
+    on_press:
+    - lambda: |-
+        id(button_mode).make_call().set_value(0).perform();

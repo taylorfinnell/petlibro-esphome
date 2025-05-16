@@ -1,0 +1,62 @@
+number:
+  # How long to keep the pump on for
+  - platform:         template
+    id:               pump_on
+    name:             Pump On (mins)
+    icon:             mdi:timer-sand-complete
+    entity_category:  config
+    mode:             box
+    optimistic:       true
+    min_value:        1
+    max_value:        120
+    initial_value:    10
+    step:             1
+    restore_value:    yes
+
+  # How long to keep the pump off for
+  - platform:         template
+    id:               pump_off
+    name:             Pump Off (mins)
+    icon:             mdi:timer-sand-complete
+    entity_category:  config
+    mode:             box
+    optimistic:       true
+    min_value:        1
+    max_value:        120
+    initial_value:    10
+    step:             1
+    restore_value:    yes
+
+switch:
+
+  # Switch to enable the pump interval timings
+  - platform:         template
+    id:               pump_interval
+    name:             Pump Interval
+    icon:             mdi:pump-off
+    entity_category:  config
+    restore_mode:     RESTORE_DEFAULT_OFF
+    optimistic:       True
+    turn_off_action:
+      then:
+        - lambda: |-
+            id(pump_time_tmp)=0;
+
+interval:
+  - interval:         1min
+    then:
+      - lambda: |-
+          if(id(pump_interval).state){
+            id(pump_time_tmp)=id(pump_time_tmp)+1;
+            if(id(pump).state){
+              if(id(pump_time_tmp)>=int(id(pump_on).state)){
+                id(pump).turn_off();
+                id(pump_time_tmp)=0;
+              }
+            } else {
+              if(id(pump_time_tmp)>=int(id(pump_off).state)){
+                id(pump).turn_on();
+                id(pump_time_tmp)=0;
+              }
+            }
+          }

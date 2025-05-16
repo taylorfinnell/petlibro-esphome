@@ -1,0 +1,6 @@
+binary_sensor:
+  - platform:                 template
+    id:                       pump_error
+    name:                     Pump Error
+    lambda: |-
+      return id(errors).state >= 10;
