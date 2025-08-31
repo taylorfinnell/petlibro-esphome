@@ -6,6 +6,23 @@ Petlibro makes WiFi-connected pet food feeders and water fountains based on ESP8
 
 This ESPHome firmware implements local LAN support with almost feature-parity as stock firmware without need for cloud/WAN connection.
 
+# Factory firmware backup
+
+Before flashing the firmware for either device, it is recommended to save a backup of the flash memory. The firmware installed from the factory includes data unique to your device, such as the internal ID and cryptographic keys used to communicate with the cloud server, so if you wish to be able to return your device to a state where it can communicate with the Petlibro cloud then you'll need to have made a backup.
+
+This can be done by following the instructions for setting up the serial connection for your device in developer mode as per the instructions below, and then running the following `esptool` command:
+
+```bash
+esptool.py --before=default-reset --no-stub read-flash 0x0 ALL petlibro_factory_dump.bin
+```
+
+You are, of course, free to change the name of the output file as desired.
+
+- The `--before=default-reset` and `--no-stub` flags may not be required, but do seem to make the process more reliable.
+- If the read fails, try power cycling the device. In testing, it sometimes would fail to read the file part of the way through unless the device had been cleanly restarted immediately before the dump was initiated.
+
+The firmware for each device
+
 # Dockstream Smart Fountain (PLWF105)
 
 An esphome firmware for PLWF105 automatic water bowl (also called the Dockstream Smart Fountain or the PETLIBRO App Monitoring Cat Water Fountain with Wireless Pump) by Petlibro. 
