@@ -1,0 +1,106 @@
+number:
+  # How many days you want a filter to last
+  - platform:                 template
+    id:                       filter_life
+    name:                     Filter Life (Days)
+    icon:                     mdi:timer-sand-complete
+    entity_category:          config
+    mode:                     box
+    optimistic:               true
+    min_value:                1
+    max_value:                60
+    initial_value:            14
+    step:                     1
+    restore_value:            yes
+
+switch:
+
+  # Switch to either use or not use the front button to reset the filter life
+  - platform:                 template
+    id:                       front_filter
+    name:                     Front Button Resets Filter
+    icon:                     mdi:filter-settings
+    entity_category:          config
+    restore_mode:             RESTORE_DEFAULT_ON
+    optimistic:               True
+    turn_on_action:
+      - lambda:
+          if(id(button_mode).state==2){
+            id(button_mode).make_call().set_value(3).perform();
+          }
+    turn_off_action:
+      - lambda:
+          if(id(button_mode).state==3){
+            id(button_mode).make_call().set_value(2).perform();
+          }
+
+binary_sensor:
+
+  # Filter expired
+  - platform:                 template
+    id:                       filter_exp
+    name:                     Filter Expired
+    icon:                     mdi:filter-remove
+    lambda: |-
+      return ((id(sntp_time).now().year * 10000) + (id(sntp_time).now().month * 100) + (id(sntp_time).now().day_of_month)) - ((id(filter_exp_date).year * 10000) + (id(filter_exp_date).month * 100) + (id(filter_exp_date).day)) >= 0;
+    on_state:
+      then:
+        - lambda: |-
+            if(x){
+              id(yellow_led).turn_on().perform();
+            } else {
+              id(yellow_led).turn_off().perform();
+            }
+
+datetime:
+  - platform:                 template
+    id:                       filter_install_date
+    name:                     Filter Install Date
+    entity_category:          config
+    type:                     date
+    icon:                     mdi:calendar-import
+    optimistic:               yes
+    initial_value:            "1990-12-31"
+    restore_value:            true
+    on_value:
+      then:
+        - script.execute:
+            id: set_filter_exp
+
+  - platform:                 template
+    id:                       filter_exp_date
+    name:                     Filter Exp Date
+    icon:                     mdi:calendar-remove-outline
+    entity_category:          config
+    type:                     date
+    optimistic:               yes
+    initial_value:            "1990-12-31"
+    restore_value:            true
+
+button:
+  - platform:                 template
+    id:                       filter_changed_button
+    name:                     Filter Changed
+    icon:                     mdi:file-swap
+    on_press:
+    - datetime.date.set:
+        id:                   filter_install_date
+        date:                 !lambda 'return id(sntp_time).now();'
+    - script.execute:
+        id:                   set_filter_exp
+
+script:
+  - id:                       set_filter_exp
+    mode:                     restart
+    then:
+    - datetime.date.set:
+        id:                   filter_exp_date
+        date: !lambda |-
+                auto now = id(sntp_time).now();
+                now.day_of_month = id(filter_install_date).day;
+                now.month = id(filter_install_date).month;
+                now.year = id(filter_install_date).year ;
+                uint8_t offset = (uint8_t) id(filter_life).state;
+                for (uint8_t i = 0;i< offset; i++)
+                  now.increment_day();
+                return now;

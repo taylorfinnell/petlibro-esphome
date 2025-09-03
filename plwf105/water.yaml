@@ -1,0 +1,76 @@
+defaults:
+  update_interval:            "1s"
+
+number:
+  - platform:                 template
+    id:                       min_water_level
+    name:                     Min Water level
+    icon:                     mdi:cup-outline
+    entity_category:          config
+    optimistic:               true
+    min_value:                -1_000_000_000
+    initial_value:                   350_000
+    max_value:                 1_000_000_000
+    step:                     1
+    restore_value:            yes
+
+  - platform:                 template
+    id:                       max_water_level
+    name:                     Max Water level
+    icon:                     mdi:cup-water
+    entity_category:          config
+    optimistic:               true
+    min_value:                -1_000_000_000
+    initial_value:                   950_000
+    max_value:                 1_000_000_000
+    step:                     1
+    restore_value:            yes
+
+sensor:
+  - id:                       !extend water_level
+    on_value:
+      then:
+        - lambda: |-
+            int min_level = id(min_water_level).state;
+            int max_level = id(max_water_level).state;
+            int water_level_range = max_level - min_level;
+            int water_level = x - min_level;
+            int percent = (water_level * 100) / water_level_range;
+            id(water_level_percentage).publish_state(percent);
+
+  - platform:                 template
+    id:                       water_level_percentage
+    name:                     Water Level
+    state_class:              measurement
+    update_interval:          "${update_interval}"
+    unit_of_measurement:      '%'
+    accuracy_decimals:        0
+    filters:
+      - clamp:
+          min_value:          0
+          max_value:          100
+
+binary_sensor:
+# this detects if errors is above 9
+  - platform:                 template
+    id:                       empty
+    name:                     Empty
+    icon:                     mdi:water-alert-outline
+    lambda: |-
+      return id(errors).state >= 10;
+    on_state:
+      then:
+        - lambda: |-
+            if(x) {
+              id(red_led).turn_on().set_effect("Fast_Blink").perform();
+            } else {
+              id(red_led).turn_off().perform();
+            }
+
+# this detects if the water tank is removed
+  - platform:                 template
+    id:                       tank_removed
+    name:                     Tank Removed
+    icon:                     mdi:watering-can-outline
+    lambda: |-
+      return id(water_level).state < id(min_water_level).state - 150000;

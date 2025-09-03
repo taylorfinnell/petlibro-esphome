@@ -1,0 +1,75 @@
+defaults:
+  update_interval:            "1s"
+
+sensor:
+  - platform:                 pulse_counter
+    id:                       errors
+    name:                     Pump Error Counter
+    internal:                 true
+    pin:
+      number:                 GPIO10
+      mode:                   INPUT
+
+  - platform:                 hx711
+    id:                       water_level
+    name:                     Internal Scale
+    icon:                     mdi:scale
+    entity_category:          diagnostic
+    update_interval:          "${update_interval}"
+    dout_pin:
+      number:                 GPIO18
+      mode:                   INPUT_PULLUP
+    clk_pin:
+      number:                 GPIO19
+      mode:
+        pullup:               true
+        output:               true
+    gain:                     128
+    filters:
+      - quantile:
+          window_size:        10
+          send_every:         1
+          send_first_at:      1
+          quantile:           .9
+      - lambda: |-
+          if (x <= 0.1) {
+            return 0.0;
+          } else {
+            return x;
+          }
+      - timeout:
+          timeout:            60s
+          value:              0
+
+switch:
+  - platform:                 gpio
+    id:                       pump
+    name:                     Pump
+    icon:                     mdi:pump
+    pin:
+      number:                 GPIO3
+      mode:                   OUTPUT
+    restore_mode:             ALWAYS_ON
+
+output:
+  - platform:                 gpio
+    id:                       yellow_led_output
+    pin:
+      number:                 GPIO6
+      mode:                   OUTPUT
+
+  - platform:                 gpio
+    id:                       red_led_output
+    pin:
+      number:                 GPIO7
+      mode:                   OUTPUT
+
+binary_sensor:
+  - platform:                 gpio
+    id:                       wifi_button
+    name:                     WiFi Button
+    pin:
+      number:                 GPIO1
+      mode:
+        input:                true
+        pulldown:             true

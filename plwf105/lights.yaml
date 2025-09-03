@@ -1,0 +1,40 @@
+light:
+  - platform:                 binary
+    id:                       red_led
+    name:                     Red LED
+    output:                   red_led_output
+    effects:
+      - strobe:
+          name:               Slow_Blink
+          colors:
+            - state:          True
+              duration:       500ms
+            - state:          False
+              duration:       500ms
+      - strobe:
+          name:               Fast_Blink
+          colors:
+            - state:          True
+              duration:       100ms
+            - state:          False
+              duration:       100ms
+
+  - platform:                 binary
+    id:                       yellow_led
+    name:                     Yellow LED
+    output:                   yellow_led_output
+    effects:
+      - strobe:
+          name:               Slow_Blink
+          colors:
+            - state:          True
+              duration:       500ms
+            - state:          False
+              duration:       500ms
+      - strobe:
+          name:               Fast_Blink
+          colors:
+            - state:          True
+              duration:       100ms
+            - state:          False
+              duration:       100ms
