@@ -26,7 +26,7 @@ esphome:
             id(button_mode).make_call().set_value(1).perform();
           }
           if (int(id(max_water_level).state) != 1000){
-            if(id(front_filter).state==1){
+            if(id(front_filter).state){
               id(button_mode).make_call().set_value(2).perform();
             } else {
               id(button_mode).make_call().set_value(3).perform();
@@ -137,7 +137,7 @@ number:
             }
             else if(id(button_mode).state==1){
                 id(yellow_led).turn_off().perform();
-                if(id(front_filter).state==1){
+                if(id(front_filter).state){
                   id(button_mode).make_call().set_value(2).perform();
                 } else {
                   id(button_mode).make_call().set_value(3).perform();
@@ -167,7 +167,7 @@ number:
             }
             else if(id(button_mode).state==1){
                 id(yellow_led).turn_off().perform();
-                if(id(front_filter).state==1){
+                if(id(front_filter).state){
                   id(button_mode).make_call().set_value(2).perform();
                 } else {
                   id(button_mode).make_call().set_value(3).perform();
@@ -562,13 +562,13 @@ switch:
     optimistic: True
     turn_on_action:
       - lambda: 
-            if(id(button_mode).state==2){
-                id(button_mode).make_call().set_value(3).perform();
+            if(id(button_mode).state==3){
+                id(button_mode).make_call().set_value(2).perform();
             }
     turn_off_action:
       - lambda: 
-            if(id(button_mode).state==3){
-                id(button_mode).make_call().set_value(2).perform();
+            if(id(button_mode).state==2){
+                id(button_mode).make_call().set_value(3).perform();
             }
 
 
@@ -679,7 +679,7 @@ binary_sensor:
             else if(id(button_mode).state==1){
                 id(max_water_level).make_call().set_value(id(water_level).state).perform();
                 id(yellow_led).turn_off().perform();
-                if(id(front_filter).state==1){
+                if(id(front_filter).state){
                   id(button_mode).make_call().set_value(2).perform();
                 } else {
                   id(button_mode).make_call().set_value(3).perform();
