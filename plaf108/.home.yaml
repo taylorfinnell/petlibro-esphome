@@ -1,0 +1,42 @@
+# Home-specific features
+# This is an example of a home-specific include file for non-secret settings.
+mdns:
+  disabled: true
+
+web_server:
+  port: 80
+  # Consider hosting the web content locally for improved durability
+  # in your setup.
+  # css_url: ""
+  # js_url: https://<my local server>/esphome/v3/www.js
+  version: 3
+
+# Common security parameters for all ESPHome devices.
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+  domain: !secret domain
+  
+  ap:
+    password: !secret fallback_wifi_password
+
+ota:
+  - id: !extend ota_default
+    password: !secret ota_password
+
+# Using HomeAssistant time is recommended as I've found that the internet going down
+# and your NTP server being unavailable was leading to devices getting stuck in reboot loops.
+# You must somehow include time.
+time:
+    - platform: homeassistant
+      id: my_time
+      timezone: Australia/Sydney
+      
+# Versus anything else.
+# DEPRECATED: suspected cause of reboot cycle when internet was down.
+  # - platform: sntp
+  #   id: my_time
+  #   timezone: Australia/Sydney
+  #   servers:
+  #   - !secret ntp_server1
