@@ -123,6 +123,8 @@ I do not know what GPIO0 and GPIO1 are for. I think it's for the DC-power curren
 
 The PCB very conveniently contains 4 pins that we can use to flash our firmware. `GND`, `TX`, `RX`, and `VCC`. The PCB also has two unlabled pin holes. These holes can be connected to each other put the ESP chip in programmer mode.
 
+_Note_ one of the ESP32's strapping pins, GPIO2, is connected to the motor turn switch. If the motor shaft is in a position where the switch is closed, you won't be able to use `esptool` to flash the device because it'll boot, undesireably, in SPI Download Mode. You can either carefully remove the glue holding the ribbon cable in place on the board and power it directly, or take the easier path and turn the motor shaft by hand until the plastic "gear" is no longer pressing the switch closed.
+
 ## Flashing
 
 1) Plug the USB to serial converter into your computer and hook up to the pin holes as described below. Do NOT plugin the board yet.
