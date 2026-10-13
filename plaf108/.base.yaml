@@ -1,0 +1,56 @@
+# Common ESPHome Device Sensors
+# This is a common set of platform independent sensors and controls to include on all devices.
+# Specifically this is the package of wifi and network settings to include.
+
+ota:
+  - platform: esphome
+    id: ota_default
+
+sensor:
+  - platform: uptime
+    name: Uptime
+    entity_category: DIAGNOSTIC
+
+  - platform: wifi_signal
+    name: WiFi Signal
+    update_interval: 60s
+    entity_category: DIAGNOSTIC
+
+binary_sensor:
+  - platform: status
+    name: "Status"
+
+text_sensor:
+  - platform: version
+    name: ESPHome Version
+    entity_category: DIAGNOSTIC
+  
+  - platform: wifi_info
+    ip_address:
+      name: IP
+      entity_category: DIAGNOSTIC
+    ssid:
+      name: SSID
+      entity_category: DIAGNOSTIC
+    bssid:
+      name: BSSID
+      entity_category: DIAGNOSTIC
+    mac_address:
+      name: MAC Address
+      entity_category: DIAGNOSTIC
+
+button:
+  - platform: factory_reset
+    name: "Restart with Factory Default Settings"
+    entity_category: CONFIG
+    id: reset
+    
+  - platform: safe_mode
+    name: "Safe Mode"
+    entity_category: CONFIG
+    id: safemode_button
+
+  - platform: restart
+    name: "Restart"
+    entity_category: CONFIG
+    id: restart_button

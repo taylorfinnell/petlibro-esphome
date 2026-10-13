@@ -1,0 +1,599 @@
+# Petlibro Automatic Feeder PLAF108 - common configuration
+substitutions:
+  project_name: "petlibro.af108"
+  project_version: "1.0"
+  motor_sensor_delay_ms: "8000"
+  food_sensor_delay_ms: "10000"
+
+esphome:
+  name: PLAF108
+  name_add_mac_suffix: true
+  project:
+    name: "${project_name}"
+    version: "${project_version}"
+  includes: includes/std_includes.h
+
+packages:
+  home: !include .home.yaml
+  base: !include .base.yaml
+
+esp32:
+  board: esp32-c3-devkitm-1
+  framework:
+    type: arduino
+
+api: {}
+
+ota:
+  - platform: esphome
+    id: !extend ota_default
+
+logger:
+  baud_rate: 0
+  level: DEBUG
+
+web_server:
+  port: 80
+
+wifi:
+  ap: {}
+
+captive_portal:
+
+dashboard_import:
+  package_import_url: github://wrouesnel/petlibro-esphome/plaf108/.common.plaf108.yaml
+
+binary_sensor:
+  #I (468) gpio: GPIO[1]| InputEn: 0| OutputEn: 1| OpenDrain: 0| Pullup: 0| Pulldown: 1| Intr:0                                                                                                                                                                                                                                               
+  #I (599) gpio: GPIO[2]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:0   
+
+  - platform: gpio
+    pin: 
+      number: GPIO1
+      mode:
+        output: true
+        pulldown: true
+    name: "GPIO1"
+
+  - platform: gpio
+    pin:
+      number: GPIO2
+      mode: INPUT_PULLUP
+    name: "GPIO2"
+
+  #I (571) gpio: GPIO[0]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:4   
+  - platform: gpio
+    name: Battery
+    pin: 
+      number: GPIO0
+      mode: 
+        pullup: true
+        input:  true  
+
+  #I (590) gpio: GPIO[4]| InputEn: 0| OutputEn: 0| OpenDrain: 0| Pullup: 0| Pulldown: 0| Intr:0
+  - platform: gpio
+    name: 'Battery Plugged In'
+    pin: GPIO4
+
+  #I (562) gpio: GPIO[5]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:4   
+  - platform: gpio
+    pin: 
+      number: GPIO5
+      inverted: true
+      mode: 
+        pullup: true
+        input:  true
+    name: Mains Connected
+  
+  #I (543) gpio: GPIO[8]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:4         # SENSOR                                                                   
+  - platform: gpio
+    name: Motor Sensor
+    pin: 
+      inverted: true
+      number: GPIO8
+      mode: 
+        pullup: true
+        input:  true
+    # Increment the motor activation sensor each time we see a press.
+    # Meal size is determined by the number of presses. In my experience
+    # this should be at least 2. This sensor should no more then 4-5 seconds
+    # after the motor is activated.
+    on_press:
+      then: 
+        lambda: |-
+          id(present_motor_sensor_triggers) += 1;
+    entity_category: DIAGNOSTIC
+
+  #I (553) gpio: GPIO[18]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:0                                                                   
+  - platform: gpio
+    id: food_sensor
+    pin: 
+      number: GPIO18
+      mode: 
+        pullup: true
+        input:  true
+    name: Food Sensor
+    filters:
+    - delayed_off: ${food_sensor_delay_ms}ms
+    on_state:
+    - script.execute: evaluate_food_sensor
+
+  #I (503) gpio: GPIO[19]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:4        
+  - platform: gpio
+    pin: 
+      number: GPIO19
+      inverted: true
+      mode: 
+        pullup: true
+        input: true
+    name: Reset Button
+    on_multi_click:
+    # Single Click
+    - timing:
+        - ON for at most 1s
+        - OFF for at least 0.5s
+      then:
+        - button.press: restart_button
+    # Double Click
+    - timing:
+        - ON for at most 1s
+        - OFF for at most 1s
+        - ON for at most 1s
+        - OFF for at least 0.2s
+      then:
+        - button.press: safemode_button
+    # Click and Hold
+    - timing:
+        - ON for at least 10s
+      then:
+        - button.press: reset
+    entity_category: DIAGNOSTIC
+
+#I (530) gpio: GPIO[3]| InputEn: 0| OutputEn: 1| OpenDrain: 0| Pullup: 0| Pulldown: 0| Intr:0  
+status_led:
+  pin: 
+    number: GPIO3
+    mode:
+      output: true
+
+switch:
+  #I (481) gpio: GPIO[6]| InputEn: 0| OutputEn: 1| OpenDrain: 0| Pullup: 0| Pulldown: 0| Intr:0    
+  - platform: gpio
+    id: motor_right
+    name: 'Motor Right'
+    pin: 
+      number: GPIO6
+      mode: 
+        output: true
+    restore_mode: ALWAYS_OFF
+    interlock: &interlock_group [motor_left, motor_right]
+    entity_category: DIAGNOSTIC
+
+  #I (490) gpio: GPIO[7]| InputEn: 0| OutputEn: 1| OpenDrain: 0| Pullup: 0| Pulldown: 0| Intr:0 
+  - platform: gpio
+    id: motor_left
+    name: 'Motor Left'
+    pin: 
+      number: GPIO7
+      mode: 
+        output: true
+    restore_mode: ALWAYS_OFF
+    interlock: *interlock_group
+    entity_category: DIAGNOSTIC
+  
+  #I (516) gpio: GPIO[10]| InputEn: 0| OutputEn: 1| OpenDrain: 0| Pullup: 0| Pulldown: 1| Intr:0             
+  # We do use the alarm as state - clearing the LED clears the alert statuses.
+  - platform: gpio
+    icon: mdi:alert-circle
+    id: alarm_led
+    name: 'Alarm'
+    pin: 
+      number: GPIO10
+      mode: 
+        output: true
+        pulldown: true
+    on_state:
+    - if:
+        condition:
+          lambda: |-
+            return !x;
+        then:
+        - script.execute: reset_alarms
+
+  #I (580) gpio: GPIO[9]| InputEn: 0| OutputEn: 1| OpenDrain: 0| Pullup: 0| Pulldown: 0| Intr:0     
+  - platform: gpio
+    id: food_sensor_enable
+    name: 'Enable Food Sensor'
+    pin: 
+      number: GPIO9
+      mode: 
+        output: true
+    restore_mode: ALWAYS_ON
+    on_state:
+    - script.execute: evaluate_food_sensor
+    entity_category: CONFIG
+
+  # Status Sensors
+  - platform: template
+    icon: mdi:alert-box-outline
+    id: is_out_of_food
+    name: "Out Of Food Alarm"
+    optimistic: true
+    on_state:
+    - script.execute: evaluate_alarms
+
+  # Status Sensors
+  - platform: template
+    icon: mdi:alert-box-outline
+    id: is_stalled
+    name: "Motor Stall Alarm"
+    optimistic: true
+    on_state:
+    - script.execute: evaluate_alarms
+
+  # Status Sensors
+  - platform: template
+    icon: mdi:alert-box-outline
+    id: is_food_dispense_too_long
+    name: "Food Dispensing Timed Out"
+    optimistic: true
+    on_state:
+    - script.execute: evaluate_alarms
+
+  # Meal Configuration
+  - platform: template
+    id: meal_time_1_enable
+    name: "Meal Time 1 Enable"
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_OFF
+
+  - platform: template
+    id: meal_time_2_enable
+    name: "Meal Time 2 Enable"
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_OFF
+
+  - platform: template
+    id: meal_time_3_enable
+    name: "Meal Time 3 Enable"
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_OFF
+
+  - platform: template
+    id: meal_time_4_enable
+    name: "Meal Time 4 Enable"
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_OFF
+
+  - platform: template
+    id: meal_time_5_enable
+    name: "Meal Time 5 Enable"
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_OFF
+
+  - platform: template
+    id: meal_time_6_enable
+    name: "Meal Time 6 Enable"
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_OFF
+
+  - platform: template
+    id: meal_time_7_enable
+    name: "Meal Time 7 Enable"
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_OFF
+
+  - platform: template
+    id: meal_time_8_enable
+    name: "Meal Time 8 Enable"
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_OFF
+
+button:
+  - platform: template
+    icon: mdi:hamburger
+    name: "Dispense Meal"
+    on_press:
+    - script.execute: 
+        id: dispense_food
+        meal_size: !lambda return id(meal_size).state;
+
+number:
+  - platform: template
+    icon: mdi:bowl
+    id: meal_size
+    name: "Meal Size"
+    optimistic: true
+    min_value: 1
+    max_value: 10
+    step: 1
+    restore_value: true
+
+uart:
+  tx_pin: GPIO21
+  rx_pin: GPIO20
+  baud_rate: 115200
+
+# Time is defined in the common import.
+# time:
+#   - platform: sntp
+#     id: my_time
+
+datetime:
+  - platform: template
+    id: meal_time_1
+    type: time
+    name: Meal Time 1
+    optimistic: yes
+    initial_value: "06:00:00"
+    restore_value: true
+    on_time:
+    - if:
+        condition:
+          switch.is_on: meal_time_1_enable
+        then:
+        - script.execute: dispense_food
+
+  - platform: template
+    id: meal_time_2
+    type: time
+    name: Meal Time 2
+    optimistic: yes
+    initial_value: "08:30:00"
+    restore_value: true
+    on_time:
+    - if:
+        condition:
+          switch.is_on: meal_time_2_enable
+        then:
+        - script.execute: dispense_food
+
+  - platform: template
+    id: meal_time_3
+    type: time
+    name: Meal Time 3
+    optimistic: yes
+    initial_value: "12:30:00"
+    restore_value: true
+    on_time:
+    - if:
+        condition:
+          switch.is_on: meal_time_3_enable
+        then:
+        - script.execute: dispense_food
+
+  - platform: template
+    id: meal_time_4
+    type: time
+    name: Meal Time 4
+    optimistic: yes
+    initial_value: "17:00:00"
+    restore_value: true
+    on_time:
+    - if:
+        condition:
+          switch.is_on: meal_time_4_enable
+        then:
+        - script.execute: dispense_food
+
+  - platform: template
+    id: meal_time_5
+    type: time
+    name: Meal Time 5
+    optimistic: yes
+    initial_value: "20:30:00"
+    restore_value: true
+    on_time:
+    - if:
+        condition:
+          switch.is_on: meal_time_5_enable
+        then:
+        - script.execute: dispense_food
+
+  - platform: template
+    id: meal_time_6
+    type: time
+    name: Meal Time 6
+    optimistic: yes
+    initial_value: "11:30:00"
+    restore_value: true
+    on_time:
+    - if:
+        condition:
+          switch.is_on: meal_time_6_enable
+        then:
+        - script.execute: dispense_food
+
+  - platform: template
+    id: meal_time_7
+    type: time
+    name: Meal Time 7
+    optimistic: yes
+    initial_value: "01:30:00"
+    restore_value: true
+    on_time:
+    - if:
+        condition:
+          switch.is_on: meal_time_7_enable
+        then:
+        - script.execute: dispense_food
+
+  - platform: template
+    id: meal_time_8
+    type: time
+    name: Meal Time 8
+    optimistic: yes
+    initial_value: "03:00:00"
+    restore_value: true
+    on_time:
+    - if:
+        condition:
+          switch.is_on: meal_time_8_enable
+        then:
+        - script.execute: dispense_food
+
+text_sensor:
+  - platform: template
+    name: Last Food Dispense Success
+    id: last_food_dispense_success
+    device_class: timestamp
+
+  - platform: template
+    name: Last Food Dispense Attempt
+    id: last_food_dispense_attempt
+    device_class: timestamp
+
+globals:
+- id: present_motor_sensor_triggers
+  type: int
+  restore_value: no
+  initial_value: "0"
+
+- id: last_motor_sensor_triggers
+  type: int
+  restore_value: no
+  initial_value: "0"
+
+- id: motor_sensor_delay_ms
+  type: int
+  restore_value: no
+  initial_value: "${motor_sensor_delay_ms}"
+
+script:
+- id: evaluate_food_sensor
+  mode: single
+  then:
+  - if:
+      condition:
+        and:
+        - switch.is_on: food_sensor_enable
+        - binary_sensor.is_off: food_sensor
+      then:
+      - switch.template.publish:
+          id: is_out_of_food
+          state: ON
+      else:
+      - switch.template.publish:
+          id: is_out_of_food
+          state: OFF
+# Determine if the Alarm LED should be turned on
+- id: evaluate_alarms
+  mode: single
+  then:
+  - if:
+      any:
+      - switch.is_on: is_out_of_food
+      - switch.is_on: is_stalled
+      - switch.is_on: is_food_dispense_too_long
+      then:
+      - switch.turn_on: alarm_led
+      else:
+      - switch.turn_off: alarm_led
+
+
+# Reset the alarms
+- id: reset_alarms
+  mode: single
+  then:
+  - switch.turn_off: is_out_of_food
+  - switch.turn_off: is_stalled
+  - switch.turn_off: is_food_dispense_too_long
+  - script.execute: evaluate_alarms
+
+# Ensure meal dispesning finishes in a reasonable time
+- id: watchdog_dispensing
+  mode: single
+  # parameters:
+  #   meal_size: int
+  then:
+  - delay: !lambda return id(meal_size).state*2*id(motor_sensor_delay_ms);
+  - script.stop: dispense_food
+  - logger.log: "Dispensing Food: Watchdog timeout!"
+  - switch.turn_on: is_food_dispense_too_long
+  - script.execute: evaluate_alarms
+
+# Dispense a meal
+- id: dispense_food
+  mode: single
+  # parameters:
+  #   #meal_size: int
+  then:
+  - logger.log: "Dispensing Food: Started"
+  - lambda: |-
+      const auto now = std::chrono::system_clock::now();
+      id(last_food_dispense_attempt).publish_state(std::format("{:%FT%TZ}", now));
+  - script.execute: 
+      id: watchdog_dispensing
+      #meal_size: !lambda return meal_size;
+  # Check if we're in motor_stalled
+  - if:
+      condition: 
+        switch.is_on: is_stalled
+      then:
+      - logger.log: "Dispensing Food: Stopped (motor stalled)"
+      - script.stop: watchdog_dispensing
+      - script.stop: dispense_food 
+  # Reset the counters
+  - lambda: |-
+      id(present_motor_sensor_triggers) = 0;
+      id(last_motor_sensor_triggers) = 0;
+  # Turn on the motor
+  - switch.turn_on: motor_left
+  # Wait for the motor to rotate to the number of requested meals
+  - while:
+      condition:
+        lambda: |-
+          return id(present_motor_sensor_triggers) < id(meal_size).state*2;
+      then:
+      # Check the motor is actually moving - we should see motor trigger sensors in no more then
+      # 6 seconds. (4-5 was typically measured). Note: there's probably a stall sensor, but I'm not
+      # sure which GPIO manages it.
+      - wait_until:
+          condition:
+            lambda: |-
+              return id(present_motor_sensor_triggers) != id(last_motor_sensor_triggers);
+          timeout: ${motor_sensor_delay_ms}ms
+      # Did we make progress?
+      - if:
+          condition:
+            lambda: |-
+              return id(present_motor_sensor_triggers) == id(last_motor_sensor_triggers);
+          then:
+            # No we did not. Do a very basic unjam attempt by reversing direction.
+            - switch.turn_off: motor_left
+            - switch.turn_on: motor_right
+            # See if we make any progress
+            - wait_until:
+                condition:
+                  lambda: |-
+                    return id(present_motor_sensor_triggers) != id(last_motor_sensor_triggers);
+                timeout: ${motor_sensor_delay_ms}ms
+            - if:
+                condition:
+                  lambda: |-
+                    return id(present_motor_sensor_triggers) == id(last_motor_sensor_triggers);
+                then:
+                # We're probably stuck - turn off everything and set alarm.
+                - switch.turn_off: motor_left
+                - switch.turn_off: motor_right
+                # Record the stall
+                - switch.turn_on: is_stalled
+                - script.execute: evaluate_alarms
+                - script.stop: dispense_food
+                # We are apparently unjammed, so continue dispensing
+                else:
+                - lambda: |-
+                    id(last_motor_sensor_triggers) = id(present_motor_sensor_triggers);
+                - switch.turn_on: motor_left
+          else:
+          - lambda: |-
+              ESP_LOGD("logger", "Dispensing Food: %.0f%%", (id(present_motor_sensor_triggers) / (id(meal_size).state*2) * 100));
+          - lambda: |-
+              id(last_motor_sensor_triggers) = id(present_motor_sensor_triggers);
+  - switch.turn_off: motor_left
+  # Stop the watchdog
+  - script.stop: watchdog_dispensing
+  - lambda: |-
+      const auto now = std::chrono::system_clock::now();
+      id(last_food_dispense_success).publish_state(std::format("{:%FT%TZ}", now));
+  - logger.log: "Dispensing Food: Successful"
